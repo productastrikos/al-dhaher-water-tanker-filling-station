@@ -1,0 +1,12 @@
+# Ignore large 3D model files
+*.glb
+*.gltf
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Node
+node_modules/
+.env

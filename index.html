@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AMO Conference Campus - 3D Digital Twin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Three.js Import Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Full-Screen 3D WebGL Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Minimal Floating Header Bar -->
+  <header class="app-header glass-panel">
+    <div class="brand-title">
+      <div class="logo-icon">
+        <i data-lucide="box" style="color: #041424; width: 18px; height: 18px;"></i>
+      </div>
+      <h1>AMO Conference Digital Twin</h1>
+    </div>
+
+    <div class="header-controls">
+      <button class="btn" id="toggle-road-builder-btn" title="Open Interactive Road Construction Suite">
+        <i data-lucide="navigation"></i> Road Tools
+      </button>
+
+      <button class="btn" id="toggle-ground-mode-btn" title="Toggle Land View vs Cyber Grid">
+        <i data-lucide="globe"></i> Land View
+      </button>
+
+      <button class="btn" id="toggle-layers-btn" title="Toggle Scene Layers Drawer">
+        <i data-lucide="layers"></i> Layers
+      </button>
+      
+      <button class="btn" id="toggle-inspector-btn" title="Toggle Object Inspector">
+        <i data-lucide="sliders"></i> Inspector
+      </button>
+
+      <button class="btn btn-primary" id="btn-save-layout" title="Save Custom Placement & Roads">
+        <i data-lucide="save"></i> Save
+      </button>
+
+      <button class="btn" id="btn-reset-layout" title="Reset Layout to Map Defaults">
+        <i data-lucide="rotate-ccw"></i> Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Drawer: Scene Layers (Collapsible) -->
+  <aside class="drawer-left glass-panel collapsed" id="drawer-layers">
+    <div class="section-title">
+      <span><i data-lucide="layers" style="width: 14px; height: 14px; display: inline;"></i> Campus Zones</span>
+      <span class="badge" id="zone-count">0 Items</span>
+    </div>
+
+    <div class="tree-list" id="scene-tree-list">
+      <!-- Scene items -->
+    </div>
+  </aside>
+
+  <!-- Road Construction Panel (Collapsible Top-Center Drawer) -->
+  <aside class="drawer-road-builder glass-panel collapsed" id="drawer-road-builder">
+    <div class="section-title">
+      <span><i data-lucide="navigation" style="width: 14px; height: 14px; display: inline;"></i> Road Construction Suite</span>
+      <button class="btn" id="close-road-builder-btn" style="padding: 2px 6px;">
+        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+      </button>
+    </div>
+
+    <div class="road-tools-card">
+      <div style="font-size: 0.72rem; color: var(--text-dim);">
+        Construct, drag, edit, or delete roads built with the template GLB.
+      </div>
+
+      <div class="road-preset-buttons">
+        <button class="btn btn-sm" id="btn-add-road-straight" title="Add Straight Road">
+          <i data-lucide="minus"></i> Straight
+        </button>
+        <button class="btn btn-sm" id="btn-add-road-curve" title="Add Curved Road">
+          <i data-lucide="corner-up-right"></i> Curve
+        </button>
+        <button class="btn btn-sm" id="btn-add-road-tjunction" title="Add T-Junction">
+          <i data-lucide="git-fork"></i> T-Junction
+        </button>
+        <button class="btn btn-sm" id="btn-add-road-cross" title="Add Crossroad">
+          <i data-lucide="plus"></i> Crossroad
+        </button>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary btn-sm" id="btn-draw-road-path" style="flex: 1;">
+          <i data-lucide="pen-tool"></i> Click-to-Draw Road Path
+        </button>
+      </div>
+
+      <div class="road-draw-status hidden" id="road-draw-status">
+        <span style="color: var(--accent-cyan); font-weight: 600;">Drawing Road:</span>
+        <span id="draw-point-count">Click 3D ground to place points...</span>
+        <button class="btn btn-sm" id="btn-finish-draw-road" style="padding: 2px 8px; margin-left: auto;">Done</button>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button class="btn btn-danger btn-sm" id="btn-delete-selected-road" style="flex: 1;" title="Delete Selected Road Segment">
+          <i data-lucide="trash-2"></i> Delete Selected Road
+        </button>
+        <button class="btn btn-sm" id="btn-reset-roads" title="Reset Roads to Blueprint Network">
+          <i data-lucide="rotate-ccw"></i> Reset Roads
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Gizmo Mode Switcher (Floating Top-Left) -->
+  <div class="gizmo-switcher" id="gizmo-tools">
+    <button class="btn active" id="tool-translate" title="Translate (Move X, Y, Z)">
+      <i data-lucide="move"></i>
+    </button>
+    <button class="btn" id="tool-rotate" title="Rotate (Y-Axis)">
+      <i data-lucide="rotate-cw"></i>
+    </button>
+    <button class="btn" id="tool-scale" title="Scale Object">
+      <i data-lucide="maximize-2"></i>
+    </button>
+    <button class="btn" id="tool-deselect" title="Deselect Asset">
+      <i data-lucide="x-circle"></i>
+    </button>
+  </div>
+
+  <!-- Right Drawer: Object Inspector & Telemetry (Hidden by default, pops up on selection) -->
+  <aside class="drawer-right glass-panel collapsed" id="drawer-inspector">
+    <div class="section-title">
+      <span><i data-lucide="sliders" style="width: 14px; height: 14px; display: inline;"></i> Object Inspector</span>
+      <button class="btn" id="close-inspector-btn" style="padding: 2px 6px;">
+        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+      </button>
+    </div>
+
+    <div class="inspector-card">
+      <h3 id="inspect-title" style="font-size: 0.9rem; color: #fff;">Select an Asset</h3>
+      <div style="font-size: 0.72rem; color: var(--text-dim);" id="inspect-subtitle">
+        Click any building in 3D to edit position or inspect telemetry.
+      </div>
+
+      <!-- Position Controls -->
+      <div class="property-group">
+        <label>Position (X, Y, Z)</label>
+        <div class="vector3-inputs">
+          <div class="input-field"><span>X</span><input type="number" step="0.5" id="inp-pos-x" value="0" /></div>
+          <div class="input-field"><span>Y</span><input type="number" step="0.5" id="inp-pos-y" value="0" /></div>
+          <div class="input-field"><span>Z</span><input type="number" step="0.5" id="inp-pos-z" value="0" /></div>
+        </div>
+      </div>
+
+      <!-- Rotation Controls -->
+      <div class="property-group">
+        <label>Rotation Y (&deg;)</label>
+        <div class="input-field">
+          <span>R</span>
+          <input type="number" step="5" id="inp-rot-y" value="0" />
+        </div>
+      </div>
+
+      <!-- Scale Controls -->
+      <div class="property-group">
+        <label>Scale (X, Y, Z)</label>
+        <div class="vector3-inputs">
+          <div class="input-field"><span>SX</span><input type="number" step="0.1" id="inp-scale-x" value="1" /></div>
+          <div class="input-field"><span>SY</span><input type="number" step="0.1" id="inp-scale-y" value="1" /></div>
+          <div class="input-field"><span>SZ</span><input type="number" step="0.1" id="inp-scale-z" value="1" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span><i data-lucide="activity" style="width: 14px; height: 14px; display: inline;"></i> Live Telemetry</span>
+    </div>
+
+    <div class="telemetry-grid">
+      <div class="stat-box">
+        <span class="stat-label">Occupancy</span>
+        <span class="stat-value" id="stat-occupancy">420 / 600</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">HVAC Temp</span>
+        <span class="stat-value" id="stat-temp">22.4 &deg;C</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">Power Load</span>
+        <span class="stat-value" id="stat-power">142 kW</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">Air Quality</span>
+        <span class="stat-value" id="stat-aqi">18 (Good)</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom Navigation & View Controls Bar -->
+  <div class="bottom-nav-bar">
+    <div class="nav-group">
+      <button class="btn" id="nav-zoom-in" title="Zoom In (+)">
+        <i data-lucide="zoom-in"></i>
+      </button>
+      <button class="btn" id="nav-zoom-out" title="Zoom Out (-)">
+        <i data-lucide="zoom-out"></i>
+      </button>
+    </div>
+
+    <div style="height: 18px; width: 1px; background: var(--border-color);"></div>
+
+    <div class="nav-group">
+      <button class="btn" id="nav-pan-left" title="Pan Left">
+        <i data-lucide="arrow-left"></i>
+      </button>
+      <button class="btn" id="nav-pan-up" title="Pan Up">
+        <i data-lucide="arrow-up"></i>
+      </button>
+      <button class="btn" id="nav-pan-down" title="Pan Down">
+        <i data-lucide="arrow-down"></i>
+      </button>
+      <button class="btn" id="nav-pan-right" title="Pan Right">
+        <i data-lucide="arrow-right"></i>
+      </button>
+    </div>
+
+    <div style="height: 18px; width: 1px; background: var(--border-color);"></div>
+
+    <div class="nav-group">
+      <button class="btn" id="nav-view-top" title="Top-Down 2D Map View">
+        <i data-lucide="map"></i> 2D Top Map
+      </button>
+      <button class="btn active" id="nav-view-iso" title="3D Isometric View">
+        <i data-lucide="box"></i> 3D View
+      </button>
+      <button class="btn" id="nav-view-reset" title="Reset Camera View">
+        <i data-lucide="rotate-ccw"></i> Reset View
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Main App JavaScript -->
+  <script type="module" src="app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

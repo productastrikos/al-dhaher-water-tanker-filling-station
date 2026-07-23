@@ -1,0 +1,451 @@
+/* 3D Digital Twin Platform - Updated Clean UI Styling */
+:root {
+  --bg-dark: #041424;
+  --bg-panel: rgba(4, 24, 44, 0.88);
+  --bg-card: rgba(8, 34, 60, 0.9);
+  --border-color: rgba(100, 200, 240, 0.25);
+  --border-glow: rgba(0, 242, 255, 0.6);
+  --text-main: #e9f9ff;
+  --text-muted: #9ed7ed;
+  --text-dim: rgba(158, 215, 237, 0.65);
+  --accent-cyan: #00f2ff;
+  --accent-blue: #2a8af6;
+  --accent-green: #10b981;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+}
+
+#canvas-container {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Glassmorphism Panel Base */
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Minimal Top Floating Header Bar */
+header.app-header {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  height: 52px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  pointer-events: auto;
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-title .logo-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.brand-title h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Buttons */
+.btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: rgba(0, 242, 255, 0.18);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 242, 255, 0.3);
+  color: #fff;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.25), rgba(42, 138, 246, 0.45));
+  border-color: var(--accent-cyan);
+}
+
+.btn.active {
+  background: var(--accent-cyan);
+  color: #041424;
+  border-color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 0 12px var(--accent-cyan);
+}
+
+/* Floating Collapsible Left Drawer (Scene Tree) */
+.drawer-left {
+  position: absolute;
+  top: 76px;
+  left: 14px;
+  width: 280px;
+  max-height: calc(100vh - 170px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.drawer-left.collapsed {
+  transform: translateX(-310px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Road Construction Suite Drawer (Top-Center) */
+.drawer-road-builder {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.drawer-road-builder.collapsed {
+  transform: translate(-50%, -30px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.road-tools-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.road-preset-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.btn-sm {
+  padding: 5px 8px;
+  font-size: 0.75rem;
+}
+
+.btn-danger {
+  background: rgba(220, 38, 38, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+}
+
+.btn-danger:hover {
+  background: rgba(220, 38, 38, 0.5);
+  border-color: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+.road-draw-status {
+  background: rgba(0, 242, 255, 0.08);
+  border: 1px dashed var(--accent-cyan);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Floating Right Drawer (Object Inspector - Hidden by default!) */
+.drawer-right {
+  position: absolute;
+  top: 76px;
+  right: 14px;
+  width: 320px;
+  max-height: calc(100vh - 170px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.drawer-right.collapsed {
+  transform: translateX(350px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tree-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: all 0.15s ease;
+}
+
+.tree-item:hover {
+  background: rgba(0, 242, 255, 0.12);
+  border-color: var(--border-color);
+}
+
+.tree-item.selected {
+  background: rgba(0, 242, 255, 0.22);
+  border-color: var(--accent-cyan);
+  color: #fff;
+}
+
+.tree-item .badge {
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+/* Inspector Cards & Inputs */
+.inspector-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.property-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.property-group label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.vector3-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.input-field {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.input-field span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 14px;
+  color: var(--accent-cyan);
+}
+
+.input-field input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.78rem;
+  font-family: monospace;
+  outline: none;
+}
+
+/* Telemetry Grid */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.stat-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-box .stat-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.stat-box .stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* Floating Gizmo Tool Switcher (Left Side) */
+.gizmo-switcher {
+  position: absolute;
+  top: 76px;
+  left: 14px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-panel);
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.gizmo-switcher .btn {
+  padding: 8px;
+  justify-content: center;
+}
+
+/* Bottom Navigation Controls Bar (Zoom, Pan, Reset) */
+.bottom-nav-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-panel);
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1px solid var(--border-color);
+}
+
+.bottom-nav-bar .nav-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bottom-nav-bar .btn {
+  border-radius: 20px;
+  padding: 6px 12px;
+}
+
+/* Toast Notifications */
+#toast-container {
+  position: absolute;
+  bottom: 75px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toast {
+  background: rgba(4, 20, 36, 0.95);
+  border: 1px solid var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(0, 242, 255, 0.25);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
