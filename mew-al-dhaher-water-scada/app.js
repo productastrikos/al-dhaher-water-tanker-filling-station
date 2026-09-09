@@ -16,11 +16,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderBayGrid();
   renderAlarms();
+  renderAlarmBanner();
+  updateOpenAlarmsKpi();
   renderHourlyChart();
   renderGauge();
+  renderArchDiagram();
+  updateArchLiveBadges();
+  renderMimicDiagram();
   renderBaySelect();
   renderFlowTrack();
   renderBayControlPanel();
+  renderBayFaceplate();
   renderCctvGrid();
   renderLprLog();
   renderVideoEvents();
@@ -93,15 +99,58 @@ function statusLabel(s) {
 
 function renderAlarms() {
   const sevClass = { crit: "crit", warn: "warn", amber2: "warn", info: "info" };
-  document.getElementById("alarm-list").innerHTML = state.alarms.slice(0, 6).map(a => `
-    <div class="alarm-item">
+  const list = document.getElementById("alarm-list");
+  list.innerHTML = state.alarms.slice(0, 8).map(a => `
+    <div class="alarm-item ${a.ack ? "acked" : ""}">
       <div class="alarm-dot ${sevClass[a.sev]}"></div>
-      <div>
+      <div class="alarm-body">
         <div class="alarm-text">${a.text}</div>
         <div class="alarm-time">${a.time} ago</div>
       </div>
+      ${a.ack
+        ? `<span class="ack-btn acked-label">Acked</span>`
+        : `<button class="ack-btn" data-ack="${a.id}">Ack</button>`}
     </div>
   `).join("");
+  list.querySelectorAll("[data-ack]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const alarm = state.alarms.find(a => a.id === parseInt(btn.dataset.ack, 10));
+      if (alarm) alarm.ack = true;
+      renderAlarms();
+      renderAlarmBanner();
+      updateOpenAlarmsKpi();
+    });
+  });
+}
+
+function updateOpenAlarmsKpi() {
+  const open = state.alarms.filter(a => !a.ack).length;
+  const critOpen = state.alarms.filter(a => !a.ack && a.sev === "crit").length;
+  state.kpis.openAlarms = open;
+  const kpiEl = document.getElementById("kpi-alarms");
+  if (kpiEl) kpiEl.textContent = open;
+  const deltaEl = document.querySelector("#kpi-alarms").parentElement.querySelector(".kpi-delta");
+  if (deltaEl) {
+    if (critOpen > 0) { deltaEl.textContent = `${critOpen} critical`; deltaEl.className = "kpi-delta warn"; }
+    else if (open > 0) { deltaEl.textContent = "no critical"; deltaEl.className = "kpi-delta"; }
+    else { deltaEl.textContent = "all clear"; deltaEl.className = "kpi-delta up"; }
+  }
+}
+
+function renderAlarmBanner() {
+  const banner = document.getElementById("alarm-banner");
+  const crit = state.alarms.filter(a => !a.ack && a.sev === "crit");
+  if (crit.length === 0) { banner.hidden = true; return; }
+  banner.hidden = false;
+  banner.innerHTML = `
+    <span class="dot"></span>
+    ${crit.length} unacknowledged critical alarm${crit.length > 1 ? "s" : ""} — "${crit[0].text}"
+    <a data-jump-alarms>View &amp; acknowledge</a>
+  `;
+  banner.querySelector("[data-jump-alarms]").addEventListener("click", () => {
+    document.querySelector('.nav-item[data-view="dashboard"]').click();
+    document.getElementById("alarm-list").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 }
 
 function renderHourlyChart() {
@@ -191,6 +240,145 @@ function renderGauge() {
   document.getElementById("gauge-pressure").textContent = state.kpis.inletPressure.toFixed(1) + " bar";
 }
 
+/* ================= ARCHITECTURE DIAGRAM (Figure 1 style) ================= */
+function renderArchDiagram() {
+  const svg = `
+  <svg class="scada-svg" viewBox="0 0 1180 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowData" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0L10,5L0,10z" fill="#60a5fa"/>
+      </marker>
+      <marker id="arrowRepl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0L10,5L0,10z" fill="#34d399"/>
+      </marker>
+    </defs>
+
+    <!-- Edge box -->
+    <rect class="box box-accent" x="16" y="90" width="204" height="110" rx="8"/>
+    <text class="title" x="30" y="112">AL DHAHER LCC</text>
+    <text x="30" y="126">S!aP Connect — Edge</text>
+    <text x="30" y="146">&#8226; 42 Bay RTUs — Modbus/OPC-UA</text>
+    <text x="30" y="162">&#8226; CCTV / LPR — RTSP</text>
+    <text x="30" y="178">&#8226; K-net Gateway — HTTPS</text>
+    <text x="30" y="194" style="fill:var(--text-faint)">Field control &amp; safety unchanged</text>
+
+    <!-- Edge -> WAN -->
+    <path class="pipe-data" d="M220,135 L282,135" marker-end="url(#arrowData)"/>
+
+    <!-- WAN pill -->
+    <rect class="box" x="282" y="112" width="150" height="46" rx="23"/>
+    <text class="title" x="357" y="132" text-anchor="middle">SECURED WAN</text>
+    <text x="357" y="146" text-anchor="middle" style="font-size:9.5px">5G / GPRS / LTE &middot; IPsec</text>
+    <circle id="wan-a-dot" class="link-dot-up" cx="322" cy="172" r="4"/>
+    <text x="332" y="176" style="font-size:9.5px">Link A</text>
+    <circle id="wan-b-dot" class="link-dot-up" cx="382" cy="172" r="4"/>
+    <text x="392" y="176" style="font-size:9.5px">Link B</text>
+
+    <!-- WAN -> DC -->
+    <path class="pipe-data" d="M432,135 L466,135" marker-end="url(#arrowData)"/>
+
+    <!-- Salmiya DC box -->
+    <rect class="box box-accent" x="466" y="40" width="304" height="180" rx="8"/>
+    <text class="title" x="480" y="62">S!aP PLATFORM — SALMIYA MAIN DC</text>
+    <text x="480" y="76" style="fill:var(--text-faint)">Astrikos scope &middot; Glass Box</text>
+
+    <g id="arch-modules">
+      ${["S!aP Connect","S!aP Datalake","S!aP ML &amp; AI","S!aP BPM","S!aP Viz","S!a Agentic"].map((m,i) => {
+        const col = i % 3, row = Math.floor(i / 3);
+        const x = 480 + col * 100, y = 88 + row * 40;
+        return `<rect class="box box-chip" x="${x}" y="${y}" width="92" height="32" rx="5"/>
+                <text x="${x+46}" y="${y+20}" text-anchor="middle" style="font-size:9.5px">${m}</text>`;
+      }).join("")}
+    </g>
+    <rect class="box box-chip" x="480" y="176" width="272" height="26" rx="6"/>
+    <text x="616" y="193" text-anchor="middle" style="font-size:9.5px">S!aP Core — RBAC &middot; SSO/AD &middot; Immutable Audit</text>
+
+    <!-- DC -> DR -->
+    <text x="788" y="32" text-anchor="middle" style="font-size:9.5px; fill:var(--green)">continuous replication</text>
+    <path class="pipe-repl" d="M770,105 L806,105" marker-end="url(#arrowRepl)" style="fill:none;stroke:#34d399;stroke-width:2;stroke-dasharray:3 5;animation:flowmove .9s linear infinite;"/>
+
+    <!-- DR box -->
+    <rect class="box box-green" x="806" y="55" width="220" height="100" rx="8"/>
+    <text class="title" x="820" y="76" style="fill:var(--green)">DISASTER RECOVERY</text>
+    <text x="820" y="90">MEW HQ — South Surra</text>
+    <text id="dr-status-text" x="820" y="110" class="mono" style="fill:var(--green)">RPO &asymp; 0s &middot; Synced</text>
+    <text x="820" y="128" style="fill:var(--text-faint)">Business continuity &middot; Astrikos scope</text>
+
+    <!-- DC -> Payment branch -->
+    <path class="pipe-data" d="M618,220 L618,240" marker-end="url(#arrowData)"/>
+    <rect class="box" x="466" y="248" width="304" height="42" rx="8"/>
+    <text class="title" x="618" y="266" text-anchor="middle">PAYMENT &amp; CUSTOMER SYSTEMS</text>
+    <text x="618" y="282" text-anchor="middle" style="font-size:9.5px">K-net gateway &middot; MEW web portal &middot; MEW Pay app (EN/AR)</text>
+  </svg>`;
+  document.getElementById("arch-diagram").innerHTML = svg;
+}
+
+function updateArchLiveBadges() {
+  const dotA = document.getElementById("wan-a-dot");
+  const dotB = document.getElementById("wan-b-dot");
+  if (dotA) dotA.setAttribute("class", `link-dot-${state.kpis.wanLinkA}`);
+  if (dotB) dotB.setAttribute("class", `link-dot-${state.kpis.wanLinkB}`);
+  const dr = document.getElementById("dr-status-text");
+  if (dr) {
+    if (state.kpis.drSync === "synced") {
+      dr.textContent = "RPO ≈ 0s · Synced";
+      dr.style.fill = "var(--green)";
+    } else {
+      dr.textContent = `Syncing · lag ${state.kpis.drLagSec}s`;
+      dr.style.fill = "var(--amber)";
+    }
+  }
+}
+
+/* ================= STATION PROCESS MIMIC (P&ID) ================= */
+const MANIFOLD_COUNT = 6;
+const BAYS_PER_MANIFOLD = 7;
+
+function manifoldStats(idx) {
+  const start = idx * BAYS_PER_MANIFOLD + 1;
+  const end = start + BAYS_PER_MANIFOLD - 1;
+  const bays = state.bays.filter(b => b.id >= start && b.id <= end);
+  const filling = bays.filter(b => b.status === "filling").length;
+  const fault = bays.filter(b => b.status === "fault").length;
+  const done = bays.filter(b => b.status === "done").length;
+  let cls = "valve-idle";
+  if (fault > 0) cls = "valve-fault";
+  else if (filling > 0) cls = "valve-open";
+  else if (done === bays.length) cls = "valve-done";
+  return { start, end, filling, fault, done, cls };
+}
+
+function renderMimicDiagram() {
+  const xs = [230, 370, 510, 650, 790, 930];
+  const headerY = 70;
+  let branches = "";
+  for (let i = 0; i < MANIFOLD_COUNT; i++) {
+    const { start, end, filling, fault, cls } = manifoldStats(i);
+    const x = xs[i];
+    branches += `
+      <line class="pipe" x1="${x}" y1="${headerY}" x2="${x}" y2="118" />
+      <circle class="${cls}" cx="${x}" cy="128" r="11" stroke-width="2" id="manifold-valve-${i}"/>
+      <rect class="box" x="${x - 68}" y="146" width="136" height="42" rx="6"/>
+      <text class="title" x="${x}" y="163" text-anchor="middle">MANIFOLD ${String.fromCharCode(65 + i)}</text>
+      <text x="${x}" y="178" text-anchor="middle" id="manifold-sub-${i}" style="font-size:9.5px">Bays ${start}-${end} &middot; ${filling} filling${fault ? ` &middot; ${fault} fault` : ""}</text>
+    `;
+  }
+  const svg = `
+  <svg class="scada-svg" viewBox="0 0 1180 200" xmlns="http://www.w3.org/2000/svg">
+    <rect class="box box-accent" x="10" y="46" width="160" height="48" rx="8"/>
+    <text class="title" x="22" y="66">WNCC INLET</text>
+    <text x="22" y="80" style="font-size:9.5px">Shuwaikh &middot; DN800</text>
+    <text id="mimic-inlet-flow" class="mono" x="22" y="106" style="fill:var(--accent); font-size:12px; font-weight:700;">${state.kpis.inletFlow} m&sup3;/h</text>
+
+    <path id="mimic-header-pipe" class="pipe-flow" d="M170,${headerY} L990,${headerY}" />
+    ${branches}
+
+    <text x="1000" y="${headerY - 6}" style="font-size:9px; fill:var(--text-faint)">S!aP Connect —</text>
+    <text x="1000" y="${headerY + 8}" style="font-size:9px; fill:var(--text-faint)">read-only tap</text>
+  </svg>`;
+  document.getElementById("mimic-diagram").innerHTML = svg;
+}
+
 /* ================= BAY CONTROL ================= */
 function wireBayControl() {
   document.getElementById("btn-start-fill").addEventListener("click", () => {
@@ -245,8 +433,49 @@ function renderFlowTrack() {
   }).join("");
 }
 
+function renderBayFaceplate() {
+  const bay = state.bays.find(b => b.id === selectedBayId);
+  const pct = Math.min(100, (bay.dispensed / bay.target) * 100);
+  const tankY = 24, tankH = 84;
+  const levelH = (pct / 100) * tankH;
+  const levelY = tankY + (tankH - levelH);
+  const pipeClass = bay.status === "filling" ? "pipe-flow" : "pipe-idle";
+  const valveClass = bay.status === "filling" ? "valve-open" : bay.status === "fault" ? "valve-fault" : bay.status === "done" ? "valve-done" : "valve-idle";
+  const valveLabel = bay.status === "filling" ? `${Math.min(100, Math.round((bay.flow / 60) * 100))}%` : bay.status === "fault" ? "FAULT" : "CLOSED";
+
+  const svg = `
+  <svg class="scada-svg" viewBox="0 0 600 130" xmlns="http://www.w3.org/2000/svg" style="max-width:460px;">
+    <defs>
+      <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#0891b2" stop-opacity="0.9"/>
+      </linearGradient>
+      <clipPath id="tankClip"><rect x="258" y="${tankY + 2}" width="296" height="${tankH - 4}" rx="8"/></clipPath>
+    </defs>
+
+    <text x="10" y="16" style="font-size:9.5px; fill:var(--text-faint)">INLET HEADER</text>
+    <line class="${pipeClass}" x1="10" y1="65" x2="140" y2="65"/>
+
+    <circle class="${valveClass}" cx="152" cy="65" r="15" stroke-width="2"/>
+    <line x1="152" y1="50" x2="152" y2="38" stroke="var(--text-dim)" stroke-width="2"/>
+    <rect x="140" y="30" width="24" height="8" rx="2" fill="var(--panel-alt)" stroke="var(--border-strong)"/>
+    <text x="152" y="98" text-anchor="middle" style="font-size:9px; fill:var(--text-dim)">VALVE</text>
+    <text x="152" y="111" text-anchor="middle" class="mono" style="font-size:10px; font-weight:700; fill:var(--text)">${valveLabel}</text>
+
+    <line class="${pipeClass}" x1="167" y1="65" x2="256" y2="65"/>
+
+    <rect x="256" y="${tankY}" width="300" height="${tankH}" rx="10" fill="var(--panel-alt)" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <rect x="258" y="${levelY}" width="296" height="${levelH}" fill="url(#waterGrad)" clip-path="url(#tankClip)" style="transition: y .5s ease, height .5s ease;"/>
+    <text x="406" y="${tankY + tankH / 2 - 4}" text-anchor="middle" class="mono" style="font-size:20px; font-weight:800; fill:#fff;">${pct.toFixed(0)}%</text>
+    <text x="406" y="${tankY + tankH / 2 + 15}" text-anchor="middle" style="font-size:9.5px; fill:rgba(255,255,255,0.9);">TANKER — BAY ${pad(bay.id)}</text>
+    <text x="406" y="${tankY - 6}" text-anchor="middle" style="font-size:9.5px; fill:var(--text-faint);">Custody-transfer EMF meter &middot; &plusmn;0.18%</text>
+  </svg>`;
+  document.getElementById("bay-faceplate").innerHTML = svg;
+}
+
 function renderBayControlPanel() {
   const bay = state.bays.find(b => b.id === selectedBayId);
+  renderBayFaceplate();
   document.getElementById("bc-heading").innerHTML = `Bay ${pad(bay.id)} &mdash; Live Transaction`;
   document.getElementById("bc-volume").innerHTML = `${bay.dispensed.toLocaleString()}<span style="font-size:16px;color:var(--text-dim);font-weight:600;"> / <span id="bc-target">${bay.target.toLocaleString()}</span> Imp.gal</span>`;
   const pct = Math.min(100, (bay.dispensed / bay.target) * 100);
@@ -478,6 +707,11 @@ function simulateTick() {
     const dones = state.bays.filter(b => b.status === "done");
     if (dones.length) dones[Math.floor(Math.random() * dones.length)].status = "idle";
   }
+  // maintenance occasionally clears a faulted bay back into service
+  if (Math.random() > 0.88) {
+    const faults = state.bays.filter(b => b.status === "fault");
+    if (faults.length) faults[Math.floor(Math.random() * faults.length)].status = "idle";
+  }
 
   state.kpis.activeBays = state.bays.filter(b => b.status === "filling").length;
   state.kpis.inletFlow = Math.max(400, Math.min(950, state.kpis.inletFlow + Math.round((Math.random() - 0.5) * 30)));
@@ -491,6 +725,39 @@ function simulateTick() {
   renderBayGrid();
   renderGauge();
   drawCameraFrames();
+
+  // occasional WAN link flap / DR sync lag for realism
+  if (Math.random() > 0.93) {
+    state.kpis.wanLinkA = state.kpis.wanLinkA === "up" ? "degraded" : "up";
+  }
+  if (Math.random() > 0.9) {
+    if (state.kpis.drSync === "synced") { state.kpis.drSync = "syncing"; state.kpis.drLagSec = Math.ceil(Math.random() * 4); }
+    else { state.kpis.drSync = "synced"; state.kpis.drLagSec = 0; }
+  }
+  updateArchLiveBadges();
+
+  if (document.getElementById("view-dashboard").classList.contains("active")) {
+    renderMimicDiagram();
+  }
+
+  // occasionally raise a new alarm sourced from a faulted bay
+  if (Math.random() > 0.85) {
+    const faulted = state.bays.filter(b => b.status === "fault");
+    if (faulted.length) {
+      const b = faulted[Math.floor(Math.random() * faulted.length)];
+      state.alarms.unshift({
+        id: state.nextAlarmId++,
+        sev: Math.random() > 0.6 ? "crit" : "warn",
+        text: `Bay ${pad(b.id)} — valve fault, custody metering suspended`,
+        time: "just now",
+        ack: false,
+      });
+      state.alarms = state.alarms.slice(0, 12);
+      renderAlarms();
+      renderAlarmBanner();
+      updateOpenAlarmsKpi();
+    }
+  }
 
   // if currently viewed bay updated, refresh control panel
   if (document.getElementById("view-baycontrol").classList.contains("active")) {

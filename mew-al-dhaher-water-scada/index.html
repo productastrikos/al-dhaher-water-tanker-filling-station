@@ -55,6 +55,8 @@
     </div>
   </div>
 
+  <div class="alarm-banner" id="alarm-banner" hidden></div>
+
   <div class="view-scroll">
 
     <!-- ================= VIEW: DASHBOARD ================= -->
@@ -85,6 +87,16 @@
           <div class="kpi-value" id="kpi-alarms">3</div>
           <div class="kpi-delta warn">1 critical</div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">S!aP System Architecture &amp; Data Flow <span class="hint">Operators (Al Dhaher LCC) &middot; Salmiya Central Control &middot; Tanker Owners (MEW Pay) &middot; MEW Management</span></div>
+        <div id="arch-diagram"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Station Process Mimic &mdash; Al Dhaher Manifolds <span class="hint">live P&amp;ID overview &middot; inlet header &rarr; 6 manifolds &times; 7 bays</span></div>
+        <div id="mimic-diagram"></div>
       </div>
 
       <div class="grid-2" style="margin-bottom:16px;">
@@ -137,6 +149,7 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-title" id="bc-heading">Bay 14 &mdash; Live Transaction</div>
+          <div id="bay-faceplate" style="margin-bottom:10px;"></div>
           <div class="big-metric" id="bc-volume">3,420<span style="font-size:16px;color:var(--text-dim);font-weight:600;"> / <span id="bc-target">5,000</span> Imp.gal</span></div>
           <div style="margin: 12px 0 6px;"><div class="progress-outer"><div class="progress-inner" id="bc-progress" style="width:68%;"></div></div></div>
           <div class="metric-line"><span class="k">ETA to full</span><span class="v" id="bc-eta">11m 23s</span></div>

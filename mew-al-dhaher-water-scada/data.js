@@ -11,7 +11,7 @@ const OWNERS = [
 ];
 
 const STATUSES = ["idle", "filling", "done", "fault", "offline"];
-const STATUS_WEIGHTS = { idle: 0.30, filling: 0.42, done: 0.20, fault: 0.05, offline: 0.03 };
+const STATUS_WEIGHTS = { idle: 0.31, filling: 0.44, done: 0.20, fault: 0.03, offline: 0.02 };
 
 function weightedStatus() {
   const r = Math.random();
@@ -45,13 +45,18 @@ const state = {
     openAlarms: 3,
     inletFlow: 742,             // m3/h
     inletPressure: 5.9,
+    wanLinkA: "up",             // up | degraded | down
+    wanLinkB: "up",
+    drSync: "synced",           // synced | syncing
+    drLagSec: 0,
   },
+  nextAlarmId: 6,
   alarms: [
-    { sev: "warn", text: "Bay 27 — Control valve slow-close (2.4s)", time: "2m" },
-    { sev: "amber2", text: "Bay 12 — Flow meter vs. inlet 3.9% drift", time: "6m" },
-    { sev: "crit", text: "3 failed PIN attempts — Acct #KWT-40318", time: "9m" },
-    { sev: "info", text: "WAN link A failover — link B (cluster 3)", time: "14m" },
-    { sev: "info", text: "DR sync to South Surra complete", time: "1m" },
+    { id: 1, sev: "warn", text: "Bay 27 — Control valve slow-close (2.4s)", time: "2m", ack: false },
+    { id: 2, sev: "amber2", text: "Bay 12 — Flow meter vs. inlet 3.9% drift", time: "6m", ack: false },
+    { id: 3, sev: "crit", text: "3 failed PIN attempts — Acct #KWT-40318", time: "9m", ack: false },
+    { id: 4, sev: "info", text: "WAN link A failover — link B (cluster 3)", time: "14m", ack: true },
+    { id: 5, sev: "info", text: "DR sync to South Surra complete", time: "1m", ack: true },
   ],
   hourly: {
     labels: Array.from({ length: 12 }, (_, i) => `${pad((i + 6) % 24)}:00`),
