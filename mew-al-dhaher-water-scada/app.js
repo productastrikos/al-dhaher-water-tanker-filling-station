@@ -5,6 +5,88 @@
 let selectedBayId = 14;
 let hourlyChart, gaugeChart, reportChart;
 let currentReportPeriod = "shift";
+let appReady = false;
+
+/* ================= VIEW REGISTRY + EVENT BUS (extension point for modules) =================
+   Feature modules (twin3d.js, hmi.js, erp.js, ...) register their own screens here so the
+   core app never needs editing when a module is added:
+     SIAP.registerView({ id, title, sub, group, icon, navLabel, html, onMount, onShow, onHide, onTick })
+   - group : "operations" | "revenue" | "intelligence" | "erp"   (sidebar section)
+   - icon  : any lucide icon name
+   - html  : inner HTML of the <section class="view"> (string) — or omit and own the DOM yourself
+   - onMount(section) once the section exists; onShow/onHide on navigation; onTick(state) every
+     simulation tick while the view is visible.
+   SIAP.on/emit is a tiny event bus: "ready", "tick", "view:show", "bay:select", "bay:change",
+   "fill:start", "fill:stop". */
+const VIEW_TITLES = {
+  dashboard: ["Command Dashboard", "Al Dhaher Lorry Filling Station · 42 Bays"],
+  baycontrol: ["Filling Bay Control", "Live transaction sequence · custody-grade metering"],
+  twin: ["Digital Twin", "End-to-end instrumented flow · one bay, fully live"],
+  cctv: ["CCTV & LPR Wall", "IP video surveillance · Al Dhaher → Salmiya Control Centre"],
+  billing: ["Billing & MEW Pay", "Prepaid wallet · K-net settlement · customer app"],
+  reports: ["Reporting", "Shift, Day & Month · central historian"],
+  sia: ["S!a — Ask it. Act on it.", "Conversational agentic AI · Glass Box explainable"],
+};
+const viewHooks = {};
+const busListeners = {};
+const NAV_GROUP_IDS = { operations: "nav-group-operations", revenue: "nav-group-revenue", intelligence: "nav-group-intelligence", erp: "nav-group-erp" };
+
+const SIAP = window.SIAP = {
+  get state() { return state; },
+  get selectedBayId() { return selectedBayId; },
+  pad, statusLabel: (s) => statusLabel(s), timeAgo: (ts) => timeAgo(ts),
+  on(evt, fn) { (busListeners[evt] = busListeners[evt] || []).push(fn); return () => SIAP.off(evt, fn); },
+  off(evt, fn) { busListeners[evt] = (busListeners[evt] || []).filter(f => f !== fn); },
+  emit(evt, payload) { (busListeners[evt] || []).forEach(fn => { try { fn(payload); } catch (e) { console.error(`[SIAP:${evt}]`, e); } }); },
+  showView(id) { const el = document.querySelector(`.nav-item[data-view="${id}"]`); if (el) el.click(); },
+  activeView() { const v = document.querySelector(".view.active"); return v ? v.id.replace(/^view-/, "") : null; },
+  selectBay(id) {
+    selectedBayId = id;
+    if (appReady) { renderBaySelect(); renderFlowTrack(); renderBayControlPanel(); renderTwinBaySelect(); renderBayTwinDiagram(id); }
+    SIAP.emit("bay:select", state.bays.find(b => b.id === id));
+  },
+  /** Start a fill on a bay, optionally overriding the transaction fields
+   *  ({ owner, account, plate, target }) — used by the ERP order-to-cash scenario. */
+  startFill(bayId, tx = {}) {
+    const bay = state.bays.find(b => b.id === bayId); if (!bay) return null;
+    Object.assign(bay, { status: "filling", dispensed: 0, flow: +(30 + Math.random() * 20).toFixed(1) }, tx);
+    if (appReady) { renderBayGrid(); if (bayId === selectedBayId) { renderFlowTrack(); renderBayControlPanel(); } }
+    SIAP.emit("fill:start", bay); SIAP.emit("bay:change", bay);
+    return bay;
+  },
+  stopFill(bayId, finalStatus = "idle") {
+    const bay = state.bays.find(b => b.id === bayId); if (!bay) return null;
+    bay.status = finalStatus; bay.flow = 0;
+    if (appReady) { renderBayGrid(); if (bayId === selectedBayId) { renderFlowTrack(); renderBayControlPanel(); } }
+    SIAP.emit("fill:stop", bay); SIAP.emit("bay:change", bay);
+    return bay;
+  },
+  registerView(def) {
+    VIEW_TITLES[def.id] = [def.title, def.sub || ""];
+    viewHooks[def.id] = def;
+    const mount = () => {
+      if (def.html && !document.getElementById(`view-${def.id}`)) {
+        const sec = document.createElement("section");
+        sec.className = "view"; sec.id = `view-${def.id}`; sec.innerHTML = def.html;
+        document.querySelector(".view-scroll").appendChild(sec);
+      }
+      if (!document.querySelector(`.nav-item[data-view="${def.id}"]`)) {
+        const group = document.getElementById(NAV_GROUP_IDS[def.group || "operations"]);
+        const item = document.createElement("div");
+        item.className = "nav-item"; item.dataset.view = def.id; item.tabIndex = 0; item.setAttribute("role", "button");
+        item.title = def.title; item.setAttribute("aria-label", def.title);
+        item.innerHTML = `<i data-lucide="${def.icon || "box"}"></i><span class="nav-label"> ${def.navLabel || def.title}</span>`;
+        // append at the end of that sidebar group (just before the next group label / footer)
+        let cursor = group.nextElementSibling;
+        while (cursor && cursor.classList.contains("nav-item")) cursor = cursor.nextElementSibling;
+        group.parentNode.insertBefore(item, cursor);
+        if (window.lucide) lucide.createIcons();
+      }
+      if (def.onMount) def.onMount(document.getElementById(`view-${def.id}`));
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true }); else mount();
+  },
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   wireNav();
@@ -27,6 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderFlowTrack();
   renderBayControlPanel();
   renderBayFaceplate();
+  renderTwinBaySelect();
+  renderBayTwinDiagram(selectedBayId);
   renderCctvGrid();
   renderLprLog();
   renderVideoEvents();
@@ -35,34 +119,49 @@ document.addEventListener("DOMContentLoaded", () => {
   renderReportTable();
   renderReportChart();
 
+  wireKeyboardActivation();
+
   lucide.createIcons();
   tickClock();
   setInterval(tickClock, 1000);
   setInterval(simulateTick, 2200);
+  appReady = true;
+  SIAP.emit("ready", state);
 });
+
+/** Lets keyboard users "click" the div-based controls (nav items, bay tiles, report
+ *  tabs, the alarm-banner link) with Enter/Space, same as a native button would. */
+function wireKeyboardActivation() {
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const el = e.target.closest(".nav-item, .bay-tile, .report-tab, [data-jump-alarms]");
+    if (!el) return;
+    e.preventDefault();
+    el.click();
+  });
+}
 
 /* ================= NAVIGATION ================= */
 function wireNav() {
-  document.querySelectorAll(".nav-item").forEach(item => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-      item.classList.add("active");
-      const view = item.dataset.view;
-      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-      document.getElementById(`view-${view}`).classList.add("active");
+  // Delegated so nav items injected later by modules (SIAP.registerView) work too.
+  document.querySelector(".sidebar").addEventListener("click", (e) => {
+    const item = e.target.closest(".nav-item");
+    if (!item) return;
+    const view = item.dataset.view;
+    const prev = SIAP.activeView();
+    if (prev && prev !== view && viewHooks[prev] && viewHooks[prev].onHide) viewHooks[prev].onHide();
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    item.classList.add("active");
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    const section = document.getElementById(`view-${view}`);
+    if (section) section.classList.add("active");
 
-      const titles = {
-        dashboard: ["Command Dashboard", "Al Dhaher Lorry Filling Station · 42 Bays"],
-        baycontrol: ["Filling Bay Control", "Live transaction sequence · custody-grade metering"],
-        cctv: ["CCTV & LPR Wall", "IP video surveillance · Al Dhaher → Salmiya Control Centre"],
-        billing: ["Billing & MEW Pay", "Prepaid wallet · K-net settlement · customer app"],
-        reports: ["Reporting", "Shift, Day & Month · central historian"],
-        sia: ["S!a — Ask it. Act on it.", "Conversational agentic AI · Glass Box explainable"],
-      };
-      document.getElementById("view-title").textContent = titles[view][0];
-      document.getElementById("view-sub").textContent = titles[view][1];
-      lucide.createIcons();
-    });
+    const t = VIEW_TITLES[view] || [item.title || view, ""];
+    document.getElementById("view-title").textContent = t[0];
+    document.getElementById("view-sub").textContent = t[1];
+    lucide.createIcons();
+    if (viewHooks[view] && viewHooks[view].onShow) viewHooks[view].onShow(section);
+    SIAP.emit("view:show", view);
   });
 }
 
@@ -76,7 +175,7 @@ function tickClock() {
 function renderBayGrid() {
   const grid = document.getElementById("bay-grid");
   grid.innerHTML = state.bays.map(b => `
-    <div class="bay-tile ${b.status}" data-bay="${b.id}">
+    <div class="bay-tile ${b.status}" data-bay="${b.id}" tabindex="0" role="button" aria-label="Bay ${pad(b.id)} — ${statusLabel(b.status)}">
       <div class="bay-id">BAY ${pad(b.id)}</div>
       <div class="bay-status"><span class="bay-dot"></span>${statusLabel(b.status)}</div>
     </div>
@@ -84,17 +183,25 @@ function renderBayGrid() {
 
   grid.querySelectorAll(".bay-tile").forEach(tile => {
     tile.addEventListener("click", () => {
-      selectedBayId = parseInt(tile.dataset.bay, 10);
+      SIAP.selectBay(parseInt(tile.dataset.bay, 10));
       document.querySelector('.nav-item[data-view="baycontrol"]').click();
-      renderBaySelect();
-      renderFlowTrack();
-      renderBayControlPanel();
     });
   });
 }
 
 function statusLabel(s) {
   return { idle: "Idle", filling: "Filling", done: "Done", fault: "Fault", offline: "Offline" }[s];
+}
+
+/** Turns a stored timestamp into a live "Xm ago" label — recomputed on every render so
+ *  alarms/events don't look frozen if the demo screen is left running for a while. */
+function timeAgo(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m ago`;
 }
 
 function renderAlarms() {
@@ -105,7 +212,7 @@ function renderAlarms() {
       <div class="alarm-dot ${sevClass[a.sev]}"></div>
       <div class="alarm-body">
         <div class="alarm-text">${a.text}</div>
-        <div class="alarm-time">${a.time} ago</div>
+        <div class="alarm-time">${timeAgo(a.ts)}</div>
       </div>
       ${a.ack
         ? `<span class="ack-btn acked-label">Acked</span>`
@@ -145,12 +252,19 @@ function renderAlarmBanner() {
   banner.innerHTML = `
     <span class="dot"></span>
     ${crit.length} unacknowledged critical alarm${crit.length > 1 ? "s" : ""} — "${crit[0].text}"
-    <a data-jump-alarms>View &amp; acknowledge</a>
+    <a data-jump-alarms tabindex="0" role="button">View &amp; acknowledge</a>
   `;
   banner.querySelector("[data-jump-alarms]").addEventListener("click", () => {
     document.querySelector('.nav-item[data-view="dashboard"]').click();
     document.getElementById("alarm-list").scrollIntoView({ behavior: "smooth", block: "center" });
   });
+}
+
+function verticalGradient(ctx, chartArea, colorTop, colorBottom) {
+  const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+  g.addColorStop(0, colorTop);
+  g.addColorStop(1, colorBottom);
+  return g;
 }
 
 function renderHourlyChart() {
@@ -164,8 +278,15 @@ function renderHourlyChart() {
           type: "bar",
           label: "Volume (k Imp.gal)",
           data: state.hourly.volume,
-          backgroundColor: "rgba(34,211,238,0.55)",
-          borderRadius: 4,
+          backgroundColor: (c) => {
+            const { chart } = c;
+            if (!chart.chartArea) return "rgba(34,211,238,0.55)";
+            return verticalGradient(chart.ctx, chart.chartArea, "rgba(34,211,238,0.75)", "rgba(34,211,238,0.12)");
+          },
+          hoverBackgroundColor: "rgba(34,211,238,0.9)",
+          borderRadius: 5,
+          borderSkipped: false,
+          barPercentage: 0.62,
           yAxisID: "y",
           order: 2,
         },
@@ -174,61 +295,105 @@ function renderHourlyChart() {
           label: "Revenue (KD)",
           data: state.hourly.revenue,
           borderColor: "#34d399",
-          backgroundColor: "rgba(52,211,153,0.15)",
-          tension: 0.35,
+          borderWidth: 2.5,
+          backgroundColor: (c) => {
+            const { chart } = c;
+            if (!chart.chartArea) return "rgba(52,211,153,0.15)";
+            return verticalGradient(chart.ctx, chart.chartArea, "rgba(52,211,153,0.32)", "rgba(52,211,153,0.0)");
+          },
+          fill: true,
+          tension: 0.4,
           yAxisID: "y1",
-          pointRadius: 2,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: "#34d399",
+          pointHoverBorderColor: "#04241a",
+          pointHoverBorderWidth: 2,
           order: 1,
         },
       ],
     },
-    options: chartBaseOptions(true),
+    options: chartBaseOptions(true, {
+      y: (v) => `${v}k`,
+      y1: (v) => `KD ${v}`,
+    }),
   });
 }
 
-function chartBaseOptions(dualAxis) {
-  const grid = { color: "rgba(148,178,216,0.08)" };
+function chartBaseOptions(dualAxis, tickFormat) {
+  const grid = { color: "rgba(148,178,216,0.07)", drawTicks: false };
   const ticks = { color: "#8fa3c2", font: { size: 10.5 } };
+  const fmt = tickFormat || {};
   const opts = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
+    animation: { duration: 500, easing: "easeOutQuart" },
     plugins: {
-      legend: { labels: { color: "#8fa3c2", boxWidth: 10, font: { size: 10.5 } } },
-      tooltip: { backgroundColor: "#0d1a30", borderColor: "rgba(148,178,216,0.2)", borderWidth: 1 },
+      legend: {
+        labels: {
+          color: "#c3d3ec", boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: "circle",
+          font: { size: 10.5, weight: "600" }, padding: 14,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#0d1a30", borderColor: "rgba(148,178,216,0.25)", borderWidth: 1,
+        padding: 10, titleColor: "#e7edf7", bodyColor: "#c3d3ec", boxPadding: 4,
+        titleFont: { size: 11.5, weight: "700" }, bodyFont: { size: 11 }, cornerRadius: 8,
+        displayColors: true, boxWidth: 8, boxHeight: 8, usePointStyle: true,
+      },
     },
     scales: {
-      x: { grid: { display: false }, ticks },
-      y: { grid, ticks, title: dualAxis ? { display: true, text: "Volume", color: "#8fa3c2", font: { size: 10 } } : undefined },
+      x: { grid: { display: false }, border: { color: "rgba(148,178,216,0.15)" }, ticks },
+      y: {
+        grid, border: { display: false }, ticks: { ...ticks, callback: fmt.y ? (v) => fmt.y(v) : undefined },
+        title: dualAxis ? { display: true, text: "Volume", color: "#5f7292", font: { size: 9.5, weight: "600" } } : undefined,
+      },
     },
   };
   if (dualAxis) {
-    opts.scales.y1 = { position: "right", grid: { display: false }, ticks, title: { display: true, text: "Revenue", color: "#8fa3c2", font: { size: 10 } } };
+    opts.scales.y1 = {
+      position: "right", grid: { display: false }, border: { display: false },
+      ticks: { ...ticks, callback: fmt.y1 ? (v) => fmt.y1(v) : undefined },
+      title: { display: true, text: "Revenue", color: "#5f7292", font: { size: 9.5, weight: "600" } },
+    };
   }
   return opts;
 }
 
 const GAUGE_MAX = 1000;
 
+function gaugeColor(val) {
+  if (val > 900) return "#fbbf24";
+  if (val < 350) return "#f87171";
+  return "#22d3ee";
+}
+
 function renderGauge() {
   const val = state.kpis.inletFlow;
+  const color = gaugeColor(val);
   if (!gaugeChart) {
     gaugeChart = new Chart(document.getElementById("gauge-chart"), {
       type: "doughnut",
       data: {
         datasets: [{
           data: [val, GAUGE_MAX - val],
-          backgroundColor: ["#22d3ee", "rgba(255,255,255,0.06)"],
+          backgroundColor: (c) => {
+            const { chart } = c;
+            if (c.dataIndex !== 0 || !chart.chartArea) return "rgba(255,255,255,0.06)";
+            return verticalGradient(chart.ctx, chart.chartArea, "#67e8f9", color);
+          },
           borderWidth: 0,
+          borderRadius: 6,
+          circumference: 180,
+          rotation: 270,
         }],
       },
       options: {
-        circumference: 180,
-        rotation: 270,
-        cutout: "75%",
+        cutout: "78%",
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 300 },
+        animation: { duration: 400, easing: "easeOutQuart" },
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
       },
     });
@@ -236,7 +401,9 @@ function renderGauge() {
     gaugeChart.data.datasets[0].data = [val, GAUGE_MAX - val];
     gaugeChart.update();
   }
-  document.getElementById("gauge-value").textContent = val;
+  const valueEl = document.getElementById("gauge-value");
+  valueEl.textContent = val;
+  valueEl.style.color = color;
   document.getElementById("gauge-pressure").textContent = state.kpis.inletPressure.toFixed(1) + " bar";
 }
 
@@ -287,7 +454,7 @@ function renderArchDiagram() {
         const col = i % 3, row = Math.floor(i / 3);
         const x = 480 + col * 100, y = 88 + row * 40;
         return `<rect class="box box-chip" x="${x}" y="${y}" width="92" height="32" rx="5"/>
-                <text x="${x+46}" y="${y+20}" text-anchor="middle" style="font-size:9.5px">${m}</text>`;
+                <text x="${x+46}" y="${y+20}" text-anchor="middle" style="font-size:10.5px; font-weight:600; fill:var(--text); letter-spacing:0.01em;">${m}</text>`;
       }).join("")}
     </g>
     <rect class="box box-chip" x="480" y="176" width="272" height="26" rx="6"/>
@@ -397,16 +564,17 @@ function wireBayControl() {
     renderFlowTrack();
     renderBayControlPanel();
   });
+  document.getElementById("btn-view-twin").addEventListener("click", () => {
+    document.querySelector('.nav-item[data-view="twin"]').click();
+    renderTwinBaySelect();
+    renderBayTwinDiagram(selectedBayId);
+  });
 }
 
 function renderBaySelect() {
   const sel = document.getElementById("bay-select");
   sel.innerHTML = state.bays.map(b => `<option value="${b.id}" ${b.id === selectedBayId ? "selected" : ""}>Bay ${pad(b.id)} — ${statusLabel(b.status)}</option>`).join("");
-  sel.onchange = () => {
-    selectedBayId = parseInt(sel.value, 10);
-    renderFlowTrack();
-    renderBayControlPanel();
-  };
+  sel.onchange = () => SIAP.selectBay(parseInt(sel.value, 10));
 }
 
 function bayFlowStepIndex(bay) {
@@ -473,6 +641,14 @@ function renderBayFaceplate() {
   document.getElementById("bay-faceplate").innerHTML = svg;
 }
 
+/** Deterministic per-account "pre-fill" wallet balance so it stays stable while an
+ *  account is selected but still varies realistically bay-to-bay (was hardcoded before). */
+function accountBalanceSeed(account) {
+  let h = 0;
+  for (let i = 0; i < account.length; i++) h = (h * 31 + account.charCodeAt(i)) >>> 0;
+  return 80 + (h % 17000) / 100; // KD 80.00 – 250.00
+}
+
 function renderBayControlPanel() {
   const bay = state.bays.find(b => b.id === selectedBayId);
   renderBayFaceplate();
@@ -483,15 +659,18 @@ function renderBayControlPanel() {
   document.getElementById("bc-flow").textContent = (bay.status === "filling" ? bay.flow : 0) + " m³/h";
   document.getElementById("bc-valve").textContent = bay.status === "filling" ? "Open · modulating" : bay.status === "done" ? "Closed · complete" : bay.status === "fault" ? "Fault · locked" : "Closed";
   const remaining = bay.target - bay.dispensed;
-  const etaMin = bay.flow > 0 ? Math.max(0, (remaining / 1000) / (bay.flow / 60)) : 0;
+  // dispensed/target are Imp.gal, flow is m³/h (1 Imp.gal = 0.004546 m³); the demo clock runs ~60× real time
+  const etaMin = bay.flow > 0 ? Math.max(0, (remaining * 0.004546) / bay.flow) : 0;
   document.getElementById("bc-eta").textContent = bay.status === "filling" ? `${Math.floor(etaMin)}m ${Math.floor((etaMin % 1) * 60)}s` : "—";
   document.getElementById("bc-owner").textContent = bay.owner;
   document.getElementById("bc-account").textContent = bay.account;
   document.getElementById("bc-plate").textContent = bay.plate;
   const rate = 0.0025; // KD per unit, arbitrary demo rate
-  const charge = (bay.dispensed * rate).toFixed(3);
-  document.getElementById("bc-charge").textContent = `KD ${charge}`;
-  document.getElementById("bc-balance").textContent = `KD ${(148.5 - charge).toFixed(3)}`;
+  const chargeNum = bay.dispensed * rate;
+  document.getElementById("bc-charge").textContent = `KD ${chargeNum.toFixed(3)}`;
+  const preBalance = accountBalanceSeed(bay.account);
+  document.getElementById("bc-balance-pre").textContent = `KD ${preBalance.toFixed(3)}`;
+  document.getElementById("bc-balance").textContent = `KD ${Math.max(0, preBalance - chargeNum).toFixed(3)}`;
   const now = new Date();
   document.getElementById("bc-datetime").textContent = `${now.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
@@ -499,60 +678,241 @@ function renderBayControlPanel() {
   document.getElementById("btn-stop-fill").disabled = bay.status !== "filling";
 }
 
+/* ================= DIGITAL TWIN (end-to-end instrumented flow) ================= */
+function renderTwinBaySelect() {
+  const sel = document.getElementById("twin-bay-select");
+  sel.innerHTML = state.bays.map(b => `<option value="${b.id}" ${b.id === selectedBayId ? "selected" : ""}>Bay ${pad(b.id)} — ${statusLabel(b.status)}</option>`).join("");
+  sel.onchange = () => SIAP.selectBay(parseInt(sel.value, 10));
+}
+
+/** Deterministic-ish live jitter so readings move every tick without being random noise. */
+function twinJitter(seed, amplitude) {
+  return Math.sin(Date.now() / 4000 + seed) * amplitude;
+}
+
+function renderBayTwinDiagram(bayId) {
+  const bay = state.bays.find(b => b.id === bayId);
+  if (!bay) return;
+  document.getElementById("twin-hint").textContent = `Bay ${pad(bay.id)} · live`;
+
+  const filling = bay.status === "filling";
+  const fault = bay.status === "fault";
+  const offline = bay.status === "offline";
+  const commsDown = fault || offline;
+  const authed = bay.status !== "idle" && !offline;
+  const pct = Math.min(100, (bay.dispensed / bay.target) * 100);
+  const fineFill = filling && bay.dispensed > bay.target * 0.85;
+  const flow = filling ? bay.flow : 0;
+  const pressure = (state.kpis.inletPressure + (bay.id % 5) * 0.06 + twinJitter(bay.id, 0.08)).toFixed(2);
+  const temp = (26 + twinJitter(bay.id + 50, 0.7)).toFixed(1);
+  const charge = (bay.dispensed * 0.0025).toFixed(3);
+
+  const pipeClass = filling ? "pipe-flow" : "pipe-idle";
+  const inletValveClass = commsDown ? "valve-fault" : filling ? "valve-open" : bay.status === "done" ? "valve-done" : "valve-idle";
+  const fineValveClass = commsDown ? "valve-fault" : fineFill ? "valve-open" : filling ? "valve-done" : "valve-idle";
+  const inletValveLabel = offline ? "NO COMMS" : fault ? "FAULT" : filling ? "OPEN" : "CLOSED";
+  const fineValveLabel = offline ? "NO COMMS" : fault ? "FAULT" : fineFill ? `${Math.round(pct)}%` : filling ? "FULL FLOW" : "CLOSED";
+
+  const tankY = 118, tankH = 92, tankX = 830, tankW = 190;
+  const levelH = (pct / 100) * (tankH - 4);
+  const levelY = tankY + 2 + (tankH - 4 - levelH);
+  // LPR/QR badges live in the top band, centered over the tank — keeps them clear of
+  // the Flow Computer box (ends x=755) on the left and the tank box (starts y=118) below.
+  const badgeW = 130, badgeX = tankX + tankW / 2 - badgeW / 2, badgeCx = tankX + tankW / 2;
+
+  const svg = `
+  <svg class="scada-svg" viewBox="0 0 1180 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="twinWaterGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#0891b2" stop-opacity="0.9"/>
+      </linearGradient>
+      <clipPath id="twinTankClip"><rect x="${tankX + 2}" y="${tankY + 2}" width="${tankW - 4}" height="${tankH - 4}" rx="8"/></clipPath>
+    </defs>
+
+    <!-- Control center + flow computer (mirrors S!aP Connect / RTU already on the arch diagram) -->
+    <rect class="box box-chip" x="430" y="14" width="160" height="54" rx="6"/>
+    <text class="title" x="510" y="35" text-anchor="middle">CONTROL CENTER</text>
+    <text x="510" y="51" text-anchor="middle" style="font-size:9px">S!aP Connect &middot; Bay ${pad(bay.id)} RTU</text>
+
+    <rect class="box box-chip" x="605" y="14" width="150" height="54" rx="6"/>
+    <text class="title" x="680" y="35" text-anchor="middle">FLOW COMPUTER</text>
+    <text x="680" y="51" text-anchor="middle" style="font-size:9px">${offline ? "Offline &middot; no comms" : fault ? "Fault &middot; locked" : filling ? (fineFill ? "Auto &middot; fine-fill top-up" : "Auto &middot; full flow") : bay.status === "done" ? "Cycle complete" : "Standby"}</text>
+
+    <line x1="440" y1="68" x2="255" y2="150" stroke="var(--border-strong)" stroke-width="1.3"/>
+    <line x1="480" y1="68" x2="400" y2="150" stroke="var(--border-strong)" stroke-width="1.3"/>
+    <line x1="650" y1="68" x2="560" y2="150" stroke="var(--border-strong)" stroke-width="1.3"/>
+    <line x1="700" y1="68" x2="655" y2="150" stroke="var(--border-strong)" stroke-width="1.3"/>
+
+    <!-- Station inlet (source) -->
+    <rect class="box box-accent" x="10" y="130" width="150" height="82" rx="8"/>
+    <text class="title" x="24" y="152">STATION INLET</text>
+    <text x="24" y="168" style="font-size:9.5px">WNCC header &middot; DN800</text>
+    <text x="24" y="196" class="mono" style="fill:var(--accent); font-size:13px; font-weight:700;">${state.kpis.inletFlow} m&sup3;/h</text>
+
+    <line class="${pipeClass}" x1="160" y1="170" x2="238" y2="170"/>
+
+    <!-- Inlet valve -->
+    <circle class="${inletValveClass}" cx="255" cy="170" r="16" stroke-width="2"/>
+    <text x="255" y="207" text-anchor="middle" style="font-size:9px">INLET VALVE</text>
+    <text x="255" y="220" text-anchor="middle" class="mono" style="font-size:9.5px; font-weight:700;">${inletValveLabel}</text>
+
+    <line class="${pipeClass}" x1="271" y1="170" x2="330" y2="170"/>
+
+    <!-- Custody flowmeter -->
+    <rect class="box" x="330" y="150" width="90" height="42" rx="6"/>
+    <text class="title" x="375" y="167" text-anchor="middle" style="font-size:9.5px">FLOWMETER</text>
+    <text x="375" y="183" text-anchor="middle" class="mono" style="font-size:11px; font-weight:700; fill:var(--accent);">${flow.toFixed(1)} m&sup3;/h</text>
+    <text x="375" y="207" text-anchor="middle" style="font-size:8.5px; fill:var(--text-faint);">custody &plusmn;0.18%</text>
+
+    <line class="${pipeClass}" x1="420" y1="170" x2="620" y2="170"/>
+
+    <!-- Pressure transmitter (branch up) -->
+    <line x1="480" y1="170" x2="480" y2="142" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <circle cx="480" cy="126" r="15" fill="var(--bg-alt)" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <text x="480" y="130" text-anchor="middle" class="mono" style="font-size:8.5px; font-weight:700; fill:var(--text);">PT</text>
+    <text x="480" y="102" text-anchor="middle" class="mono" style="font-size:10px; font-weight:700; fill:var(--accent);">${pressure} bar</text>
+    <text x="480" y="207" text-anchor="middle" style="font-size:8.5px; fill:var(--text-faint);">inlet pressure</text>
+
+    <!-- Temperature transmitter (branch down) -->
+    <line x1="560" y1="170" x2="560" y2="198" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <circle cx="560" cy="214" r="15" fill="var(--bg-alt)" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <text x="560" y="218" text-anchor="middle" class="mono" style="font-size:8.5px; font-weight:700; fill:var(--text);">TT</text>
+    <text x="560" y="242" text-anchor="middle" class="mono" style="font-size:10px; font-weight:700; fill:#fbbf24;">${temp}&deg;C</text>
+    <text x="560" y="258" text-anchor="middle" style="font-size:8.5px; fill:var(--text-faint);">water temp</text>
+
+    <!-- Fine-fill valve -->
+    <circle class="${fineValveClass}" cx="640" cy="170" r="16" stroke-width="2"/>
+    <text x="640" y="207" text-anchor="middle" style="font-size:9px">FINE-FILL VALVE</text>
+    <text x="640" y="220" text-anchor="middle" class="mono" style="font-size:9.5px; font-weight:700;">${fineValveLabel}</text>
+
+    <line class="${pipeClass}" x1="656" y1="170" x2="760" y2="170"/>
+
+    <!-- LPR + auth badges — sit in the clear top band above the tank (not beside it),
+         so they can never collide with the tank box or its plate/owner label below. -->
+    <rect class="box-chip" x="${badgeX}" y="20" width="${badgeW}" height="24" rx="5" style="fill:var(--bg-alt); stroke:var(--border);"/>
+    <text x="${badgeCx}" y="36" text-anchor="middle" style="font-size:9px;">
+      <tspan style="fill:var(--text-dim);">LPR&nbsp;</tspan>
+      <tspan style="fill:${authed ? "var(--green)" : "var(--text-faint)"}; font-weight:700;">${authed ? "PLATE OK" : "AWAITING"}</tspan>
+    </text>
+    <rect x="${badgeX}" y="48" width="${badgeW}" height="24" rx="5" style="fill:var(--bg-alt); stroke:var(--border);"/>
+    <text x="${badgeCx}" y="64" text-anchor="middle" style="font-size:9px;">
+      <tspan style="fill:var(--text-dim);">QR/PIN&nbsp;</tspan>
+      <tspan style="fill:${authed ? "var(--green)" : "var(--text-faint)"}; font-weight:700;">${authed ? "VERIFIED" : "AWAITING"}</tspan>
+    </text>
+    <line x1="${badgeCx}" y1="44" x2="${badgeCx}" y2="48" stroke="var(--border-strong)" stroke-width="1.3"/>
+    <line x1="${badgeCx}" y1="72" x2="${badgeCx}" y2="${tankY}" stroke="var(--border-strong)" stroke-width="1.3"/>
+
+    <!-- Tanker receiving vessel -->
+    <rect x="${tankX}" y="${tankY}" width="${tankW}" height="${tankH}" rx="10" fill="var(--panel-alt)" stroke="var(--border-strong)" stroke-width="1.5"/>
+    <rect x="${tankX + 2}" y="${levelY}" width="${tankW - 4}" height="${levelH}" fill="url(#twinWaterGrad)" clip-path="url(#twinTankClip)" style="transition: y .5s ease, height .5s ease;"/>
+    <text x="${tankX + tankW / 2}" y="${tankY + tankH / 2 - 2}" text-anchor="middle" class="mono" style="font-size:20px; font-weight:800; fill:#fff;">${pct.toFixed(0)}%</text>
+    <text x="${tankX + tankW / 2}" y="${tankY + tankH / 2 + 17}" text-anchor="middle" style="font-size:9.5px; fill:rgba(255,255,255,0.9);">TANKER &middot; BAY ${pad(bay.id)}</text>
+    <text x="${tankX + tankW / 2}" y="${tankY - 8}" text-anchor="middle" style="font-size:9px; fill:var(--text-faint);">${bay.plate} &middot; ${bay.owner}</text>
+
+    <!-- Debit + receipt -->
+    <line x1="${tankX + tankW}" y1="${tankY + tankH / 2}" x2="1020" y2="${tankY + tankH / 2}" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="3 4"/>
+    <rect class="box box-green" x="1020" y="${tankY + tankH / 2 - 36}" width="150" height="72" rx="8"/>
+    <text class="title" x="1095" y="${tankY + tankH / 2 - 14}" text-anchor="middle" style="fill:var(--green);">DEBIT &amp; RECEIPT</text>
+    <text x="1095" y="${tankY + tankH / 2 + 6}" text-anchor="middle" class="mono" style="font-size:14px; font-weight:800; fill:var(--green);">KD ${charge}</text>
+    <text x="1095" y="${tankY + tankH / 2 + 24}" text-anchor="middle" style="font-size:8.5px; fill:var(--text-faint);">SMS + email on completion</text>
+  </svg>`;
+  document.getElementById("twin-diagram").innerHTML = svg;
+}
+
 /* ================= CCTV ================= */
-const camCanvases = [];
-function wireCctv() {}
+const CAMERAS = [
+  { id: "CAM-01", label: "Gate Entry",  meta: "LPR · UHD", img: "assets/images/cctv/gate-entry.jpg",  tag: "PLATE OK" },
+  { id: "CAM-07", label: "Bay 14 Arm",  meta: "60fps",     img: "assets/images/cctv/bay14-arm.jpg",   tag: "FILL ARM OK" },
+  { id: "CAM-12", label: "Apron West",  meta: "LPR · UHD", img: "assets/images/cctv/apron-west.jpg",  tag: "AREA CLEAR" },
+  { id: "CAM-19", label: "Bay 22 PTZ",  meta: "60fps",     img: "assets/images/cctv/bay22-ptz.jpg",   tag: "TANKER ID" },
+  { id: "CAM-24", label: "Gate Exit",   meta: "LPR · UHD", img: "assets/images/cctv/gate-exit.jpg",   tag: "PLATE OK" },
+  { id: "CAM-31", label: "Overview",    meta: "60fps",     img: "assets/images/cctv/overview.jpg",    tag: "42 BAYS OK" },
+];
+
+function wireCctv() {
+  document.addEventListener("click", (e) => {
+    const tile = e.target.closest(".cam-tile");
+    if (tile) openCamLightbox(parseInt(tile.dataset.cam, 10));
+    if (e.target.closest("[data-close-lightbox]")) closeCamLightbox();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCamLightbox(); });
+}
 
 function renderCctvGrid() {
   const grid = document.getElementById("cctv-grid");
-  const labels = [
-    "CAM-01 Gate Entry", "CAM-07 Bay 14 Arm", "CAM-12 Apron West",
-    "CAM-19 Bay 22 PTZ", "CAM-24 Gate Exit", "CAM-31 Overview",
-  ];
-  grid.innerHTML = labels.map((label, i) => `
-    <div class="cam-tile">
-      <canvas id="cam-canvas-${i}" width="320" height="200"></canvas>
+  grid.innerHTML = CAMERAS.map((cam, i) => `
+    <div class="cam-tile" data-cam="${i}" style="background-image:url('${cam.img}')">
+      <div class="cam-crosshair"><span class="h"></span><span class="v"></span></div>
+      <div class="cam-time" id="cam-time-${i}">--:--:--</div>
       <div class="cam-rec"><span class="dot"></span> REC</div>
-      <div class="cam-label"><span>${label}</span><span>${i % 2 === 0 ? "LPR · UHD" : "60fps"}</span></div>
+      <div class="cam-overlay-box" id="cam-box-${i}" style="display:none;"></div>
+      <div class="cam-overlay-tag" id="cam-tag-${i}" style="display:none;">${cam.tag}</div>
+      <div class="cam-label"><span>${cam.id} ${cam.label}</span><span>${cam.meta}</span></div>
     </div>
   `).join("");
-  labels.forEach((_, i) => {
-    camCanvases.push(document.getElementById(`cam-canvas-${i}`).getContext("2d"));
-  });
   drawCameraFrames();
 }
 
 function drawCameraFrames() {
-  camCanvases.forEach((ctx, i) => {
-    const w = ctx.canvas.width, h = ctx.canvas.height;
-    ctx.fillStyle = "#050c17";
-    ctx.fillRect(0, 0, w, h);
-    // faint scanline grid
-    ctx.strokeStyle = "rgba(34,211,238,0.06)";
-    for (let y = 0; y < h; y += 8) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-    // simulated "road/apron" horizon
-    ctx.fillStyle = "rgba(148,178,216,0.05)";
-    ctx.fillRect(0, h * 0.55, w, h * 0.45);
-    // moving blob = tanker silhouette
-    const t = Date.now() / 1000 + i * 3;
-    const x = ((Math.sin(t * 0.5) + 1) / 2) * (w - 90) + 10;
-    ctx.fillStyle = "rgba(148,178,216,0.35)";
-    ctx.fillRect(x, h * 0.58, 80, 30);
-    ctx.fillRect(x + 8, h * 0.5, 26, 14);
-    // detection box occasionally
-    if (Math.sin(t) > 0.3) {
-      ctx.strokeStyle = "#22d3ee";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x - 4, h * 0.48, 90, 44);
-      ctx.fillStyle = "#22d3ee";
-      ctx.font = "9px sans-serif";
-      ctx.fillText("PLATE OK", x - 4, h * 0.48 - 4);
+  const now = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  CAMERAS.forEach((cam, i) => {
+    const timeEl = document.getElementById(`cam-time-${i}`);
+    if (timeEl) timeEl.textContent = now;
+
+    const box = document.getElementById(`cam-box-${i}`);
+    const tag = document.getElementById(`cam-tag-${i}`);
+    if (!box || !tag) return;
+    // occasionally (re)position a detection box to feel "live" without a jarring redraw every tick
+    if (Math.random() > 0.35) {
+      const left = 12 + Math.random() * 55;
+      const top = 30 + Math.random() * 40;
+      const w = 22 + Math.random() * 14;
+      const h = 16 + Math.random() * 12;
+      box.style.left = left + "%";
+      box.style.top = top + "%";
+      box.style.width = w + "%";
+      box.style.height = h + "%";
+      box.style.display = "block";
+      tag.style.left = left + "%";
+      tag.style.top = top + "%";
+      tag.style.display = "block";
+    } else {
+      box.style.display = "none";
+      tag.style.display = "none";
     }
-    // timestamp
-    ctx.fillStyle = "rgba(207,228,255,0.55)";
-    ctx.font = "9px monospace";
-    ctx.fillText(new Date().toLocaleTimeString("en-GB", { hour12: false }), 6, 14);
   });
+}
+
+function openCamLightbox(i) {
+  const cam = CAMERAS[i];
+  if (!cam) return;
+  let box = document.getElementById("cam-lightbox");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "cam-lightbox";
+    box.className = "cam-lightbox";
+    document.body.appendChild(box);
+  }
+  box.innerHTML = `
+    <div class="cam-lightbox-inner">
+      <div class="cam-lightbox-frame" style="background-image:url('${cam.img}')">
+        <div class="cam-crosshair"><span class="h"></span><span class="v"></span></div>
+        <div class="cam-time">${new Date().toLocaleTimeString("en-GB", { hour12: false })}</div>
+        <div class="cam-rec"><span class="dot"></span> REC</div>
+        <div class="cam-label"><span>${cam.id} ${cam.label}</span><span>${cam.meta}</span></div>
+      </div>
+      <div class="cam-lightbox-bar">
+        <div class="util-text">Live feed &middot; Al Dhaher &rarr; Salmiya Control Centre &middot; 60-day NVR retention</div>
+        <div class="cam-lightbox-close" data-close-lightbox>Close (Esc)</div>
+      </div>
+    </div>`;
+  box.onclick = (e) => { if (e.target === box) closeCamLightbox(); };
+}
+
+function closeCamLightbox() {
+  const box = document.getElementById("cam-lightbox");
+  if (box) box.remove();
 }
 
 function renderLprLog() {
@@ -571,12 +931,12 @@ function renderLprLog() {
 
 function renderVideoEvents() {
   const sevClass = { crit: "crit", warn: "warn", info: "info" };
-  document.getElementById("video-events").innerHTML = state.videoEvents.map(e => `
+  document.getElementById("video-events").innerHTML = state.videoEvents.slice(0, 6).map(e => `
     <div class="alarm-item">
       <div class="alarm-dot ${sevClass[e.sev]}"></div>
       <div>
         <div class="alarm-text">${e.text}</div>
-        <div class="alarm-time">${e.tag} &middot; ${e.time} ago</div>
+        <div class="alarm-time">${e.tag} &middot; ${timeAgo(e.ts)}</div>
       </div>
     </div>
   `).join("");
@@ -637,46 +997,86 @@ function renderReportChart() {
       datasets: [{
         label: "Volume",
         data: r.chartData,
-        backgroundColor: "rgba(34,211,238,0.55)",
-        borderRadius: 4,
+        backgroundColor: (c) => {
+          const { chart } = c;
+          if (!chart.chartArea) return "rgba(34,211,238,0.55)";
+          return verticalGradient(chart.ctx, chart.chartArea, "rgba(34,211,238,0.75)", "rgba(34,211,238,0.12)");
+        },
+        hoverBackgroundColor: "rgba(34,211,238,0.9)",
+        borderRadius: 5,
+        borderSkipped: false,
+        barPercentage: 0.55,
       }],
     },
     options: chartBaseOptions(false),
   });
 }
 
-/* ================= S!A CHAT ================= */
+/* ================= S!A CHAT (page view + floating panel share the same logic) ================= */
 function wireSia() {
-  const send = () => {
-    const input = document.getElementById("chat-input");
-    const text = input.value.trim();
-    if (!text) return;
-    pushChat("user", text);
-    input.value = "";
-    setTimeout(() => {
-      const answer = state.siaResponses[text.toLowerCase()] ||
-        "S!a is analyzing across S!aP Datalake (42 bays, CCTV analytics, K-net settlement) — here's a summary answer for the demo. In production this is generated live from the historian with a confidence score and source trace.";
-      pushChat("bot", answer);
-    }, 500);
-  };
-  document.getElementById("chat-send").addEventListener("click", send);
-  document.getElementById("chat-input").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
-  document.querySelectorAll(".suggest-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      document.getElementById("chat-input").value = chip.dataset.q;
-      send();
-    });
+  wireChatSurface("chat-window", "chat-input", "chat-send");
+  document.querySelectorAll("#view-sia .suggest-chip").forEach(chip => {
+    chip.addEventListener("click", () => askInSurface("chat-window", "chat-input", chip.dataset.q));
   });
-  pushChat("bot", "Ask S!a about operations, revenue, assets or security across Al Dhaher — I'll answer in plain language with the sources behind it.");
+  pushChat("chat-window", "bot", "Ask S!a about operations, revenue, assets or security across Al Dhaher — I'll answer in plain language with the sources behind it.");
+
+  wireChatSurface("ai-panel-window", "ai-panel-input", "ai-panel-send");
+  document.querySelectorAll("#ai-panel-chips .suggest-chip").forEach(chip => {
+    chip.addEventListener("click", () => askInSurface("ai-panel-window", "ai-panel-input", chip.dataset.q));
+  });
+  pushChat("ai-panel-window", "bot", "Hi — I'm S!a. Ask me about bay performance, revenue, forecasts or security across Al Dhaher.");
+
+  wireAiFab();
 }
 
-function pushChat(who, text) {
-  const win = document.getElementById("chat-window");
+function wireChatSurface(windowId, inputId, sendId) {
+  const send = () => askInSurface(windowId, inputId, document.getElementById(inputId).value.trim());
+  document.getElementById(sendId).addEventListener("click", send);
+  document.getElementById(inputId).addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+}
+
+function askInSurface(windowId, inputId, text) {
+  if (!text) return;
+  pushChat(windowId, "user", text);
+  const input = document.getElementById(inputId);
+  if (input) input.value = "";
+  setTimeout(() => {
+    const answer = state.siaResponses[text.toLowerCase()] ||
+      "S!a is analyzing across S!aP Datalake (42 bays, CCTV analytics, K-net settlement) — here's a summary answer for the demo. In production this is generated live from the historian with a confidence score and source trace.";
+    pushChat(windowId, "bot", answer);
+  }, 500);
+}
+
+function pushChat(windowId, who, text) {
+  const win = document.getElementById(windowId);
+  if (!win) return;
   const bubble = document.createElement("div");
   bubble.className = `chat-bubble ${who}`;
   bubble.innerHTML = text.replace(/\n/g, "<br>");
   win.appendChild(bubble);
   win.scrollTop = win.scrollHeight;
+}
+
+function wireAiFab() {
+  const fab = document.getElementById("ai-fab");
+  const panel = document.getElementById("ai-panel");
+  const close = document.getElementById("ai-panel-close");
+  const openPanel = () => {
+    panel.classList.add("open");
+    fab.classList.add("open");
+    fab.innerHTML = '<i data-lucide="x"></i>';
+    lucide.createIcons();
+    document.getElementById("ai-panel-input").focus();
+  };
+  const closePanel = () => {
+    panel.classList.remove("open");
+    fab.classList.remove("open");
+    fab.innerHTML = '<i data-lucide="sparkles"></i>';
+    lucide.createIcons();
+  };
+  fab.addEventListener("click", () => panel.classList.contains("open") ? closePanel() : openPanel());
+  close.addEventListener("click", closePanel);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && panel.classList.contains("open")) closePanel(); });
 }
 
 /* ================= SIMULATION TICK ================= */
@@ -717,10 +1117,12 @@ function simulateTick() {
   state.kpis.inletFlow = Math.max(400, Math.min(950, state.kpis.inletFlow + Math.round((Math.random() - 0.5) * 30)));
   state.kpis.revenueToday += Math.random() * 12;
   state.kpis.tankersServed += Math.random() > 0.7 ? 1 : 0;
+  state.kpis.volumeToday += Math.random() * 0.0008;
 
   document.getElementById("kpi-active").innerHTML = `${state.kpis.activeBays}<span class="kpi-unit">/42</span>`;
   document.getElementById("kpi-revenue").textContent = `KD ${Math.round(state.kpis.revenueToday).toLocaleString()}`;
   document.getElementById("kpi-tankers").textContent = state.kpis.tankersServed.toLocaleString();
+  document.getElementById("kpi-volume").innerHTML = `${state.kpis.volumeToday.toFixed(2)}<span class="kpi-unit">M Imp.gal</span>`;
 
   renderBayGrid();
   renderGauge();
@@ -749,14 +1151,18 @@ function simulateTick() {
         id: state.nextAlarmId++,
         sev: Math.random() > 0.6 ? "crit" : "warn",
         text: `Bay ${pad(b.id)} — valve fault, custody metering suspended`,
-        time: "just now",
+        ts: Date.now(),
         ack: false,
       });
       state.alarms = state.alarms.slice(0, 12);
-      renderAlarms();
       renderAlarmBanner();
       updateOpenAlarmsKpi();
     }
+  }
+
+  // keep "Xm ago" labels honest even when nothing else changed on this tick
+  if (document.getElementById("view-dashboard").classList.contains("active")) {
+    renderAlarms();
   }
 
   // if currently viewed bay updated, refresh control panel
@@ -765,15 +1171,31 @@ function simulateTick() {
     renderBayControlPanel();
     renderBaySelect();
   }
+  if (document.getElementById("view-twin").classList.contains("active")) {
+    renderTwinBaySelect();
+    renderBayTwinDiagram(selectedBayId);
+  }
   if (document.getElementById("view-billing").classList.contains("active") && Math.random() > 0.5) {
     state.ledger.unshift(genLedgerRow());
     state.ledger.pop();
     renderLedger();
   }
-  if (document.getElementById("view-cctv").classList.contains("active") && Math.random() > 0.6) {
-    state.lprLog.unshift(genLprRow());
-    state.lprLog.pop();
-    renderLprLog();
+  if (document.getElementById("view-cctv").classList.contains("active")) {
+    renderVideoEvents();
+    if (Math.random() > 0.6) {
+      state.lprLog.unshift(genLprRow());
+      state.lprLog.pop();
+      renderLprLog();
+    }
+    if (Math.random() > 0.75) {
+      state.videoEvents.unshift(genVideoEvent());
+      state.videoEvents = state.videoEvents.slice(0, 8);
+      renderVideoEvents();
+    }
   }
+  // module screens registered via SIAP.registerView
+  const active = SIAP.activeView();
+  if (active && viewHooks[active] && viewHooks[active].onTick) viewHooks[active].onTick(state);
+  SIAP.emit("tick", state);
   lucide.createIcons();
 }

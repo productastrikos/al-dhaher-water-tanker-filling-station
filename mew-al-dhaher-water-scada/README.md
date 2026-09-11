@@ -35,7 +35,30 @@ offline.
    export/schedule actions (UI only).
 6. **S!a — Ask & Act** — a light natural-language query panel with a handful
    of scripted demo answers (kept intentionally minimal per guidance to focus
-   the demo on operational/SCADA workflows over AI).
+   the demo on operational/SCADA workflows over AI). Also available as a
+   floating assistant button (bottom-right) on every screen, not just its own
+   page.
+7. **Digital Twin** — a single bay's complete instrumented flow as one live
+   animated schematic (tanker → LPR/auth → inlet valve → custody flowmeter →
+   pressure/temperature transmitters → fine-fill valve → tanker fill →
+   debit/receipt), in the same 2D P&ID style as the Station Process Mimic.
+   Open it from the sidebar or via "View Digital Twin" on the Filling Bay
+   Control screen.
+8. **ERP Integration** — a small illustrative card on the Command Dashboard
+   showing S!aP ⇄ ERP data flow and a mocked sync log. Not a real
+   integration — proof of integration-readiness only.
+
+## Two entry points, one demo
+
+- `index.html` — the main operator/control-room dashboard (desktop).
+- `mobile.html` — the MEW Pay customer companion, phone-shaped and
+  interactive (wallet, top-up, QR pay, stations, history). Reachable from
+  the Billing screen's "Open on phone" link, or open directly on an actual
+  phone during a demo. It's a standalone page with its own tiny state in
+  `mobile.js` — not wired to `data.js`, by design, so it works even if
+  opened on a separate device with no shared backend (mirrors the pattern
+  used for the DSO project's `/responder` page: a responsive web view, not
+  a native app).
 
 ## Notes for whoever picks this up next
 
@@ -45,3 +68,12 @@ offline.
   closely so it reads as "the same product" in the room.
 - To extend: bay/KPI/report data lives in `data.js`; all rendering + the
   simulation loop is in `app.js`; visual styling/tokens are in `styles.css`.
+- The CCTV wall (`assets/images/cctv/`) uses real Unsplash stock photos
+  (licensed for free commercial use) as camera backgrounds instead of a
+  canvas simulation, with a CSS "surveillance" treatment (scanlines,
+  vignette, desaturation) plus an animated detection box overlay. Swap those
+  files for real Al Dhaher site photos when available — same filenames.
+- Charts (Chart.js) use scriptable gradient fills tied to the theme tokens
+  in `styles.css`; if you change `--accent`/`--green`, update the gradient
+  colors in `app.js` (`renderHourlyChart`, `renderGauge`, `renderReportChart`)
+  to match.

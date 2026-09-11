@@ -1,6 +1,8 @@
-# Ignore large 3D model files
+# Large 3D model files are ignored by default...
 *.glb
 *.gltf
+# ...except the curated, licensed low-poly set used by the demo (all < 6 MB, see manifest.json)
+!mew-al-dhaher-water-scada/assets/models/*.glb
 
 # Windows
 Thumbs.db
@@ -10,3 +12,4 @@ $RECYCLE.BIN/
 # Node
 node_modules/
 .env
+.firecrawl/

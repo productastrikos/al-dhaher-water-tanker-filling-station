@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>MEW Pay — Water Wallet</title>
+<link rel="stylesheet" href="styles.css?v=2" />
+<link rel="stylesheet" href="mobile.css?v=2" />
+<script src="vendor/lucide.min.js"></script>
+</head>
+<body class="mobile-body">
+
+<div class="phone-frame">
+  <div class="phone-status-bar">
+    <span>9:41</span>
+    <span class="phone-status-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span>
+  </div>
+
+  <header class="mobile-header">
+    <div class="mobile-header-brand"><div class="brand-mark" style="width:28px;height:28px;font-size:13px;">S!</div> MEW Pay</div>
+    <button class="mobile-icon-btn" aria-label="Notifications"><i data-lucide="bell"></i></button>
+  </header>
+
+  <main class="mobile-screens">
+
+    <!-- ============ WALLET (home) ============ -->
+    <section class="mscreen active" id="mscreen-wallet">
+      <div class="wallet-hero">
+        <div class="wallet-hero-label">Water Wallet Balance</div>
+        <div class="wallet-hero-balance" id="m-balance">KD 139.950</div>
+        <div class="wallet-hero-sub">Al-Salem Transport &middot; Acct KWT-40216</div>
+      </div>
+      <div class="mobile-quick-actions">
+        <button class="qa-btn" data-goto="topup"><i data-lucide="plus-circle"></i>Top-up</button>
+        <button class="qa-btn" data-goto="qr"><i data-lucide="qr-code"></i>QR Pay</button>
+        <button class="qa-btn" data-goto="stations"><i data-lucide="map-pin"></i>Stations</button>
+        <button class="qa-btn" data-goto="history"><i data-lucide="history"></i>History</button>
+      </div>
+      <div class="mobile-section-title">Recent Activity</div>
+      <div id="m-activity"></div>
+    </section>
+
+    <!-- ============ TOP-UP ============ -->
+    <section class="mscreen" id="mscreen-topup">
+      <button class="mback" data-back="wallet"><i data-lucide="chevron-left"></i> Wallet</button>
+      <div class="mobile-section-title" style="margin-top:0;">Top-up Water Wallet</div>
+      <div class="topup-amounts" id="topup-amounts">
+        <button class="amt-chip" data-amt="10">KD 10</button>
+        <button class="amt-chip" data-amt="25">KD 25</button>
+        <button class="amt-chip" data-amt="50">KD 50</button>
+        <button class="amt-chip" data-amt="100">KD 100</button>
+      </div>
+      <div class="topup-custom"><span>KD</span><input type="number" id="topup-custom-input" placeholder="Custom amount" inputmode="decimal" /></div>
+      <button class="btn btn-primary" id="topup-pay-btn" style="width:100%; justify-content:center; margin-top:16px;"><i data-lucide="credit-card"></i> Pay with K-net</button>
+      <div class="util-text" style="margin-top:10px;">Demo only &mdash; no real payment is processed.</div>
+    </section>
+
+    <!-- ============ QR PAY ============ -->
+    <section class="mscreen" id="mscreen-qr">
+      <button class="mback" data-back="wallet"><i data-lucide="chevron-left"></i> Wallet</button>
+      <div class="mobile-section-title" style="margin-top:0;">Show this at the bay</div>
+      <div class="qr-card">
+        <div class="qr-block" id="qr-block"></div>
+        <div class="qr-account">KWT-40216</div>
+        <div class="qr-owner">Al-Salem Transport Co.</div>
+      </div>
+      <div class="util-text" style="margin-top:12px;">Scan at any Al Dhaher bay kiosk to start a prepaid fill &mdash; no cash needed. Balance debits automatically on completion.</div>
+    </section>
+
+    <!-- ============ STATIONS ============ -->
+    <section class="mscreen" id="mscreen-stations">
+      <button class="mback" data-back="wallet"><i data-lucide="chevron-left"></i> Wallet</button>
+      <div class="mobile-section-title" style="margin-top:0;">MEW Water Filling Stations</div>
+      <div class="station-card">
+        <i data-lucide="map-pin"></i>
+        <div>
+          <div class="station-name">Al Dhaher Lorry Filling Station</div>
+          <div class="station-sub">42 bays &middot; 6 manifolds &middot; 2.1 km away</div>
+        </div>
+        <span class="tag green">Open</span>
+      </div>
+      <div class="station-card">
+        <i data-lucide="map-pin"></i>
+        <div>
+          <div class="station-name">Sulaibiya Filling Station</div>
+          <div class="station-sub">On S!aP platform &middot; 14.6 km away</div>
+        </div>
+        <span class="tag gray">Coming online</span>
+      </div>
+      <div class="station-card">
+        <i data-lucide="map-pin"></i>
+        <div>
+          <div class="station-name">Jahra Filling Station</div>
+          <div class="station-sub">On S!aP platform &middot; 21.3 km away</div>
+        </div>
+        <span class="tag gray">Coming online</span>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY ============ -->
+    <section class="mscreen" id="mscreen-history">
+      <button class="mback" data-back="wallet"><i data-lucide="chevron-left"></i> Wallet</button>
+      <div class="mobile-section-title" style="margin-top:0;">Transaction History</div>
+      <div id="m-history-list"></div>
+    </section>
+
+  </main>
+
+  <nav class="mobile-tabbar">
+    <button class="mtab active" data-screen="wallet"><i data-lucide="wallet"></i><span>Wallet</span></button>
+    <button class="mtab" data-screen="qr"><i data-lucide="qr-code"></i><span>Pay</span></button>
+    <button class="mtab" data-screen="stations"><i data-lucide="map-pin"></i><span>Stations</span></button>
+    <button class="mtab" data-screen="history"><i data-lucide="history"></i><span>History</span></button>
+  </nav>
+</div>
+
+<script src="mobile.js?v=2"></script>
+</body>
+</html>

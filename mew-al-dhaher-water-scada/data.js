@@ -32,6 +32,7 @@ function randAccount() {
 }
 
 function pad(n) { return n.toString().padStart(2, "0"); }
+function minutesAgo(m) { return Date.now() - m * 60000; }
 
 const BAY_COUNT = 42;
 
@@ -52,11 +53,11 @@ const state = {
   },
   nextAlarmId: 6,
   alarms: [
-    { id: 1, sev: "warn", text: "Bay 27 — Control valve slow-close (2.4s)", time: "2m", ack: false },
-    { id: 2, sev: "amber2", text: "Bay 12 — Flow meter vs. inlet 3.9% drift", time: "6m", ack: false },
-    { id: 3, sev: "crit", text: "3 failed PIN attempts — Acct #KWT-40318", time: "9m", ack: false },
-    { id: 4, sev: "info", text: "WAN link A failover — link B (cluster 3)", time: "14m", ack: true },
-    { id: 5, sev: "info", text: "DR sync to South Surra complete", time: "1m", ack: true },
+    { id: 1, sev: "warn", text: "Bay 27 — Control valve slow-close (2.4s)", ts: minutesAgo(2), ack: false },
+    { id: 2, sev: "amber2", text: "Bay 12 — Flow meter vs. inlet 3.9% drift", ts: minutesAgo(6), ack: false },
+    { id: 3, sev: "crit", text: "3 failed PIN attempts — Acct #KWT-40318", ts: minutesAgo(9), ack: false },
+    { id: 4, sev: "info", text: "WAN link A failover — link B (cluster 3)", ts: minutesAgo(14), ack: true },
+    { id: 5, sev: "info", text: "DR sync to South Surra complete", ts: minutesAgo(1), ack: true },
   ],
   hourly: {
     labels: Array.from({ length: 12 }, (_, i) => `${pad((i + 6) % 24)}:00`),
@@ -66,11 +67,11 @@ const state = {
   ledger: [],
   lprLog: [],
   videoEvents: [
-    { sev: "crit", text: "Water leak detected — Bay 09 apron", time: "3m", tag: "Paddle growth ↑ threshold — maintenance notified" },
-    { sev: "warn", text: "Hatch mis-alignment — Bay 31", time: "9m", tag: "Arm-camera guidance shown to driver" },
-    { sev: "info", text: "Facial + plate identity confirmed — Gate 1", time: "12m", tag: "3-factor match — driver verified" },
-    { sev: "warn", text: "Barrier auto-raised — plate 4/11827", time: "17m", tag: "Synchronized local + Salmiya command" },
-    { sev: "info", text: "Loitering after fill — Bay 05", time: "20m", tag: "Vehicle > 6 min post-completion — operator alerted" },
+    { sev: "crit", text: "Water leak detected — Bay 09 apron", ts: minutesAgo(3), tag: "Paddle growth ↑ threshold — maintenance notified" },
+    { sev: "warn", text: "Hatch mis-alignment — Bay 31", ts: minutesAgo(9), tag: "Arm-camera guidance shown to driver" },
+    { sev: "info", text: "Facial + plate identity confirmed — Gate 1", ts: minutesAgo(12), tag: "3-factor match — driver verified" },
+    { sev: "warn", text: "Barrier auto-raised — plate 4/11827", ts: minutesAgo(17), tag: "Synchronized local + Salmiya command" },
+    { sev: "info", text: "Loitering after fill — Bay 05", ts: minutesAgo(20), tag: "Vehicle > 6 min post-completion — operator alerted" },
   ],
   mewActivity: [
     { label: "Fill — Bay 14", delta: "-KD 8.550" },
@@ -185,8 +186,22 @@ function genLprRow() {
     owner: matched ? OWNERS[Math.floor(Math.random() * OWNERS.length)] : "—",
     gate: GATES[Math.floor(Math.random() * GATES.length)],
     status: matched
-      ? (Math.random() > 0.5 ? `Matched · Bay ${Math.ceil(Math.random() * 42)}` : `Filled ${(Math.random() * 5000 + 3000).toFixed(0)} KG`)
+      ? (Math.random() > 0.5 ? `Matched · Bay ${Math.ceil(Math.random() * 42)}` : `Filled ${(Math.random() * 2000 + 3000).toFixed(0)} IG`)
       : "No match · Gate held",
   };
 }
 for (let i = 0; i < 7; i++) state.lprLog.push(genLprRow());
+
+/* ---------- video analytics event pool (rotates into state.videoEvents live) ---------- */
+const VIDEO_EVENT_POOL = [
+  { sev: "warn", text: "Vehicle idling beyond limit — Bay 18 apron", tag: "Auto-notify sent to gate marshal" },
+  { sev: "info", text: "Plate re-confirmed on exit — Gate 2", tag: "3-factor match — driver verified" },
+  { sev: "warn", text: "PPE not detected — walking lane, Bay 27", tag: "Safety officer alerted" },
+  { sev: "info", text: "Night-mode IR switch — Apron West", tag: "Illumination below threshold" },
+  { sev: "crit", text: "Unauthorized approach — Gate 1 barrier", tag: "Barrier held, security dispatched" },
+  { sev: "info", text: "Tanker queue cleared — Manifold C", tag: "Average wait back under 4 min" },
+];
+function genVideoEvent() {
+  const t = VIDEO_EVENT_POOL[Math.floor(Math.random() * VIDEO_EVENT_POOL.length)];
+  return { ...t, ts: Date.now() };
+}

@@ -1,0 +1,692 @@
+
+===== PAGE 6 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 6 
+Secured revenue Prepaid, account-based charging via K-net with immutable audit trail 
+and automatic reconciliation to the MEW bank account. 
+Minimised water 
+loss 
+Custody-transfer metering, mass-balance analytics and AI leak 
+detection reduce non-revenue water. 
+Resilient & offline-
+capable 
+Dual-link mesh WAN failover; bays operate on last-known balance and 
+store-and-forward when connectivity drops; DR site with continuous 
+replication. 
+Open & sovereign, 
+secure by design 
+IEC 62443 zones & conduits, ISO/IEC 27001 controls, multi-layer 
+encryption — with full explainability and MEW ownership. 
+1.4 At a Glance 
+ 
+2 About Astrikos & the S!aP Platform Philosophy 
+2.1 Corporate Overview: Deep Tech for Critical Infrastructure 
+Astrikos AI Technologies Limited is a deep -technology company specialising in operational 
+intelligence for complex infrastructure — including utilities, water, smart cities, industrial & 
+energy, data centres, airports and ports. Our patented S!aP platform bridges OT and IT, 
+layering above existing control, metering, surveillance and payment systems to turn real-time 
+operational data into centralized monitoring, revenue assurance, KPIs and AI analytics. With 
+offices across India, the USA, the UAE (our MEA Re gional Headquarters) and Singapore, and 
+Requirement Astrikos S!aP Response 
+Real-time acquisition from 42 bays + meters, 
+valves, cameras, gates 
+S!aP Connect via bay RTUs (Modbus/OPC -
+UA), CCTV (RTSP), gateways (REST), Edge at 
+Al Dhaher LCC 
+Central historian — 10-year+ retention S!aP Datalake, open time -series DB, DR -
+replicated to South Surra 
+Prepaid charging, billing, K -net settlement, 
+reporting 
+S!aP BPM + Datalake + Agentic — wallet, 
+invoicing, reconciliation, shift/day/month 
+reports 
+Centralized dashboard, surveillance, 
+unlimited users 
+S!aP Viz & Astriverse — command dashboard, 
+CCTV/LPR wall, MEW Pay & web portal 
+DR & business continuity Geographically separate DR at MEW HO 
+(South Surra), continuous replication (RPO ≈ 
+0) 
+
+===== PAGE 7 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 7 
+delivery experience across the Middle East, Africa and Asia, Astrikos is well placed to serve 
+MEW’s operations in Kuwait. 
+Astrikos holds patented technology status and aligns to ISO/IEC 27001:2013 (Information 
+Security), ISO 22320:2018 (Emergency Management), ISO 37120/37122 (Smart City 
+Indicators), ISO/IEC 21823 -1:2019 (IoT Interoperability), ISO 20001 -1:2018 and ISO/IEC 
+27034-1:2011, and follows IEC 62443 principles for OT security. 
+2.2 The S!aP Philosophy: A Layer Above, never a Replacement 
+S!aP never displaces the systems beneath it. The bay RTUs, meters and valves continue their 
+local control and custody -transfer measurement unchanged; the cameras, LPR and gate 
+barriers continue their function; S!aP reads above them and adds the centralized  historian, 
+prepaid revenue engine, analytics and dashboards. This is the essence of the platform: a 
+vendor-neutral intelligence layer that ingests data from any OT/IT/IoT source without 
+disrupting installed infrastructure, following the lifecycle Connect, Collect, Historize, Analyze, 
+Integrate, Visualize, Advise. 
+3 The S!aP Solution Architecture: Six Pillars of Intelligence 
+S!aP delivers its capability through six integrated modules plus a cross -cutting governance 
+layer. Each functional requirement in Section 5.1E maps directly to a S!aP pillar. 
+ 
+ 
+ 
+ 
+
+
+===== PAGE 8 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 8 
+# Module Role in the MEW Al Dhaher Platform 
+1 S!aP 
+Connect 
+Connects to the 42 bay RTUs (Modbus/OPC -UA), IP cameras (RTSP), 
+gate barriers, network flow instruments and the K -net gateway; Edge 
+ingestion at the Al Dhaher LCC over the secured WAN. 
+2 S!aP 
+Datalake 
+Central historian — open time-series store, 10-year+ retention of every 
+transaction and signal, DR-replicated to South Surra. 
+3 S!aP ML & 
+AI Central 
+Water-loss / mass -balance analytics, predictive maintenance on valves 
+& meters, LPR & leak detection, fraud and demand analytics — Glass Box 
+explainable. 
+4 S!aP BPM Prepaid charging logic, incident lifecycle, PIN-lockout & escalation SOPs, 
+K-net settlement reconciliation, report scheduling and immutable audit. 
+5 S!aP Viz & 
+Astriverse 
+Command dashboard, 3D digital twin, CCTV/LPR wall, executive 
+cockpit; the MEW web payment portal and MEW Pay mobile app; 
+unlimited web/intranet/LAN users. 
+6 S!aP 
+Agentic 
+(S!a) 
+Natural-language querying and automated shift/day/month reporting 
+and advisory. 
++ S!aP Core 
+(Sys 
+Admin) 
+RBAC, SSO/AD, immutable audit; supports the required operator and 
+unlimited customer access. 
+ 
+Module 1: S!aP Connect (Field, CCTV, Gateway Connectivity) 
+S!aP Connect is the vendor-neutral integration layer. At Al Dhaher it connects to each of the 
+42 bay RTUs over Modbus/OPC -UA, to the IP cameras over RTSP, to the gate barriers and 
+network-flow instruments, and to the K -net/MEW payment gateway over HTTPS. A  local 
+Edge at the Local Control Centre buffers data and transmits it to the Salmiya data centre over 
+the secured WAN. Connect is northbound and read -only towards the field — it consumes 
+values and does not write to, or alter, the RTUs, valves or control l oops. Store-and-forward 
+buffering ensures no data loss during any WAN interruption. 
+Module 2: S!aP Datalake (The Central Historian) 
+The Datalake is the central historian the tender requires. It stores every ingested transaction 
+and signal from all 42 bays plus surveillance, gate and network -flow events in an open, high-
+performance time -series database with 10 -year+ retention (configura ble and extensible), 
+organised by site, bay and device. Built on open technology, it avoids proprietary lock -in and 
+is continuously replicated to the DR site at South Surra for business continuity. 
+
+===== PAGE 9 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 9 
+Module 3: S!aP ML & AI Central (Water-Loss, Assets & Revenue Analytics) 
+ML & AI Central provides both the standard analytics and the AI differentiator. It runs custody-
+transfer mass-balance and water -loss analytics (inlet vs. dispensed), predictive maintenance 
+on valves and meters, license -plate & facial recognition and leak d etection on video, and 
+fraud/anomaly and demand analytics. Under Glass Box governance, every KPI formula, 
+threshold and model is visible, configurable and explainable by MEW’s engineers. 
+Module 4: S!aP BPM (Prepaid Charging, SOPs & Reporting) 
+S!aP BPM runs the prepaid charging logic — validate account, dispense set volume, debit exact 
+volume, issue SMS/email receipt — plus the incident lifecycle, PIN -lockout and escalation 
+SOPs, and K -net settlement reconciliation to the MEW bank account. It or chestrates the 
+shift/day/month production, revenue and performance reports on schedule and on demand, 
+with an immutable audit trail of every transaction and action. 
+Module 5: S!aP Viz & Astriverse (Centralized Dashboards & Apps) 
+S!aP Viz delivers the centralized command dashboard hosted at Salmiya, serving operators at 
+Al Dhaher and the Salmiya control centre, plus the CCTV/LPR wall, the executive cockpit, and 
+role-based dashboards. It also delivers the MEW web payment portal ("Wa ter Tanker 
+Customer Services") and the MEW Pay mobile app (Android/iOS, English/Arabic). The 
+Astriverse 3D digital twin provides spatial situational awareness of the station. 
+Module 6: S!aP Agentic (S!a) & S!aP Core 
+S!a ("Sia") is the conversational agentic AI — "Think it. Ask it. Act on it." Operators ask 
+questions in plain language across operations, revenue, assets and security and receive 
+explained, confidence -scored answers, and S!a automates the recurring shift/ day/month 
+reports with human -approval gates on any action. S!aP Core (Sys Admin) underpins the 
+platform with RBAC, SSO/AD integration and immutable audit logging. 
+4 Project Understanding 
+4.1 Overview of the Requirement 
+MEW requires a prepaid automatic control filling system across 42 bays at Al Dhaher, 
+integrated into a centralized management system at Salmiya with Disaster Recovery at South 
+Surra, covering billing, invoicing, accounting, online payment, video surveillance, network flow 
+monitoring and cyber security. Astrikos’ scope is that centralized platform and the edge 
+connectivity to the field, surveillance, gate and payment systems — not the specialist field 
+hardware itself. 
+ 
+
+===== PAGE 10 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 10 
+4.2 Scope Summary — Al Dhaher & Central 
+ 
+4.3 Functional Requirements — How S!aP Meets Them 
+● Sequence of operation (scan/PIN → validate → autofill → debit → receipt): S!aP BPM 
+orchestrates the flow; Connect drives the RTU/valve/meter loop. 
+● Prepaid, account-based charging & K -net settlement: S!aP BPM + Datalake maintain 
+the wallet; exact-volume debit; reconciliation to MEW bank. 
+● Offline operation: bay and concentrator run on last-known balance; store-and-forward 
+on WAN loss (bay up to 15 days). 
+● Surveillance, LPR & leak detection: S!aP Connect (RTSP) + ML & AI; integrated to the 
+Salmiya monitoring centre. 
+● Historic reporting & analytics: S!aP Datalake + ML & AI — shift/day/month reports, 
+water-loss and demand analytics. 
+● Remote lock-out & fraud control: PIN-abuse lockout, plate/QR mismatch detection, 
+remote enable/disable of bays. 
+  
+Requirement Al Dhaher (Local) Central (Salmiya + DR) 
+Filling bays 42 bays · custody -transfer EMF · 
+tight-shut valve · RTU 
+Aggregated historian & dashboard 
+Authentication QR / Barcode / RFID + PIN at each 
+bay 
+Account & wallet management 
+Surveillance UHD IP CCTV · LPR · leak 
+detection · 60-day NVR 
+Integrated to Salmiya monitoring 
+centre 
+Network flow DN800 flow & pressure (solar) Integrated to WNCC SCADA, 
+Shuwaikh 
+Payment — K-net · wallet · invoicing · MEW bank 
+settlement 
+Continuity Offline store-and-forward (bay up 
+to 15 days) 
+DR at South Surra · continuous 
+replication 
+
+===== PAGE 11 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 11 
+4.4 Response to Tender Information Requests 
+The tender asks bidders for specific information. This offer answers each, as summarised 
+below, with detail in the referenced sections. 
+Information Requested Section Summary 
+Solution architecture (meets 
+§2–§4) 
+5 S!aP above the field; central Salmiya + DR; 
+Edge over WAN 
+Infrastructure / hardware per 
+tier 
+5 Indicative specs provided; confirmed at design 
+Data storage sizing (10-yr) + 
+growth 
+5 Indicative estimate & method; scalable 
+historian 
+Cyber security (IEC 62443 / 
+ISO 27001) 
+5 Zones & conduits, encryption, SIEM/EDR, DR 
+Implementation & go-live 
+timeline 
+7 Phased plan incl. 1-bay trial & 30-day reliability 
+run 
+Licensing model & scalability 8 Modular, T-shirt sized; State-wide extensible 
+Commercial quotation (CAPEX 
+/ OPEX / AMC) 
+8 Structured; indicative placeholders [TBD] 
+Maintenance, support & SLA 8 Tiered AMC / SLA options; 2-year 
+maintenance 
+Reference implementations 10 Utilities & industrial deployments (under NDA) 
+ 
+5 Solution Overview 
+5.1 Solution Architecture 
+The architecture follows the tender’s network model. Each bay RTU, camera, gate and 
+network-flow instrument at Al Dhaher is read by a local S!aP Connect Edge at the Local 
+Control Centre, which transmits data to the Salmiya main data centre over the secured WAN. 
+The Salmiya data centre hosts the full S!aP platform — the central historian, prepaid billing and 
+analytics engine, alarm/incident and reporting engine, surveillance integration and the 
+command dashboard — serving operators and unlimited customer use rs, with continuous 
+replication to the DR site at MEW Head Office, South Surra. 
+ 
+
+===== PAGE 12 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 12 
+ 
+ 
+Figure 1 — S!aP as the centralized platform above the existing field, CCTV and payment systems; bay RTUs, meters, valves, cameras and 
+gateways remain in place and are integrated, not replaced. 
+5.2 Scope Boundary — What Astrikos Supplies 
+In Astrikos scope: the S!aP platform at the Salmiya data centre (historian, prepaid 
+billing/analytics, alarms, reporting, dashboards, surveillance integration, AI), the DR replica at 
+South Surra, the S!aP Connect Edge at the Al Dhaher LCC, the integration and tag/stream 
+mapping to the 42 bay RTUs, cameras, gates, network -flow instruments and the K -net 
+gateway, and the MEW web portal and MEW Pay app. 
+Integrated but not supplied by Astrikos: the specialist field hardware — electromagnetic flow 
+meters, tight shut -off valves, RTUs, HMIs, scanners, IP67 enclosures, IP/PTZ/LPR cameras, 
+NVRs, gate barriers, solar-powered network-flow instruments, servers and network switches 
+— together with the K -net payment gateway. These are provided by the qualified system -
+manufacturer sub-contractor (per §2.9) and OEM partners and are integrated through S!aP 
+Connect. Astrikos remains the single point of accountability for the integrated platform. 
+5.3 Connectivity & Data Flow 
+S!aP Connect reads the field over standard industrial protocols (Modbus/OPC-UA), video over 
+RTSP and payment over HTTPS — so no change to the RTUs or control loops is required 
+beyond enabling access for the Edge. The Edge applies change -based collection to minimise 
+bandwidth, buffers locally (store-and-forward) to survive WAN outages without data loss, and 
+
+
+===== PAGE 13 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 13 
+forwards to the central historian over a peer -to-peer / mesh WAN with dual -link (wired + 
+5G/GPRS/LTE) failover. All flow is northbound from the field to S!aP; the platform issues no 
+control commands to the dispensing loop. 
+5.4 Infrastructure & Hosting 
+S!aP is a lightweight, containerised platform deployed on standard servers at the Salmiya data 
+centre, with a mirrored DR environment at South Surra and continuous replication between 
+them. Indicative infrastructure, sized for confirmation during detailed design, is:  
+ 
+Tier Indicative Specification Notes 
+Edge (Al Dhaher LCC) Industrial server(s), 8 –16 
+cores, 32–64 GB RAM, 2 TB 
+SSD, redundant PSU 
+Field/CCTV/gateway 
+ingestion + store -and-
+forward 
+Salmiya DC (main) HA pair, 16 –32 cores, 128 
+GB RAM, 16 –32 TB usable 
+(RAID), enterprise OS 
+Historian, billing, analytics, 
+dashboard, surveillance; 
+redundant 
+DR (South Surra) Mirror of DC spec (single or 
+HA), matched storage 
+Continuous replication 
+target; failover 
+ 
+Final hardware and redundancy are confirmed at design against MEW standards; the platform is hardware-agnostic and can 
+run on MEW-provided or Astrikos-specified infrastructure. 
+5.5 Data Storage Sizing (10-Year Historian) & Growth 
+Storage depends on the number of tags/streams per bay, the effective logging rate after 
+change-based compression, transaction volume, and video retention. With 42 bays plus 
+surveillance metadata, network-flow and payment records, a practical planning estimate is on 
+the order of a few TB per year of compressed time -series and transactional data (excluding 
+raw video, which is retained 60 days on the NVR tier). Astrikos recommends provisioning 16–
+32 TB usable at Salmiya (and matched capacity at DR) to cover 10 -year retention plus 
+headroom and indexing. The open historian scales horizontally, and retention, roll -up and 
+archival policies are configurable — so storage grows predictably with bays, transactions and 
+retention. Exact figures are confirmed once samplin g rates and retention per stream are 
+agreed during design. 
+5.6 Security Architecture 
+S!aP follows IEC 62443 zone-and-conduit segmentation (-4-1/-4-2/-4-3) and ISO/IEC 27001. 
+Components are distributed across segmented zones: an Enterprise (Web) zone for the portal, 
+app and APIs; a DMZ/Extractor zone that sanitises incoming data; and an Ope rations zone 
+housing the Core and Datalake, isolated from internet -facing networks. The Edge sits at the 
+
+===== PAGE 14 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 14 
+station boundary as a read -only client, so the dispensing control and safety layers are never 
+exposed or altered through the platform. AES -256 / TLS 1.3 encryption, OpenVPN/IPsec 
+tunnels, certificate-based authentication, SIEM, EDR, patch management, whitelisting, RBAC, 
+SSO/AD, immutable audit and DR replication complete the posture, supported by a 
+documented cyber risk & vulnerability assessment. 
+6 Dashboards, KPIs & User Experience 
+This section shows what MEW’s users see. Every view is centralized at Salmiya, spans the 
+whole station, is role-based, and is served to operators at Al Dhaher and Salmiya and to tanker 
+owners through the MEW Pay app. The screens below are from a working de monstration of 
+S!aP configured for Al Dhaher; views are fully configurable to MEW’s assets and KPIs. 
+6.1 Secure Access & Unlimited Users 
+Access is governed by S!aP Core: role -based access control for operators, engineers and 
+management, SSO/Active Directory integration, and an immutable audit trail. The web 
+dashboard and MEW Pay app serve the required operator and unlimited customer users, with 
+no per-user viewing constraint. 
+6.2 Central Command Dashboard 
+A single live picture of all 42 bays, station inlet flow, water dispensed, revenue, tankers served 
+and open alarms, with predictive advisories and cyber-security posture in real time. Drill-down 
+moves from station, to bay, to device and transaction. (RFP §2.2, §2.3, §3.2, §4.0) 
+ 
+
+
+===== PAGE 15 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 15 
+S!aP Command Dashboard — 42-bay status, inlet flow gauge, hourly volume/revenue with S!a demand forecast, alarms and IEC 62443 / 
+ISO 27001 posture. 
+6.3 Filling Bay Control & Transaction Flow 
+Each bay follows the tender’s sequence of operation: LPR detection, QR/PIN authentication, 
+account validation, automatic volume -controlled filling with fine -fill top -up, exact -volume 
+debit and SMS/email receipt — continuing on last -known balance if the WAN  drops. (RFP 
+§2.1, §3.5, §4.2) 
+ 
+S!aP Filling Bay Control — live fill against set-point, custody-grade metering, valve modulation, prepaid authorization and S!a hatch-
+alignment guidance. 
+6.4 Billing, Prepaid Wallet & MEW Pay 
+The prepaid ledger records every top-up and fill against the tanker owner’s wallet, with K-net 
+top-ups, QR vouchers and automatic reconciliation to the MEW bank account. The MEW Pay 
+app (Android/iOS, EN/AR) provides registration, wallet management, quick p ayment, station 
+locator and statements. (RFP §2.3, §2.4, §2.5) 
+
+
+===== PAGE 16 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 16 
+ 
+S!aP Billing & MEW Pay — prepaid transaction ledger, K-net settlement status and the customer mobile application with wallet and QR 
+payment. 
+6.5 CCTV & License Plate Recognition 
+UHD IP surveillance with triplex live/playback/record and 60 -day retention. AI video analytics deliver 
+license-plate & facial recognition at the gates, arm -camera hatch guidance and water -leak detection — 
+integrated to the Salmiya monitoring centre. (RFP §2.6, §2.7) 
+ 
+
+
+===== PAGE 17 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 17 
+S!aP CCTV & LPR Wall — camera grid with plate/leak overlays, gate LPR log matched to accounts, and AI video-analytics events. 
+6.6 S!a — Ask it. Act on it. 
+S!a lets operators query operations, revenue, assets and security in plain language and receive 
+confidence-scored, fully explainable advice. Background agents run 24/7 for demand 
+forecasting, revenue reconciliation, fraud watch, predictive maintenance and water-loss 
+analysis, with human-approval gates on any action. (RFP §2.3, §3.0) 
+ 
+S!a agentic interface — natural-language operations querying, Glass-Box recommendations, background agents and standards assurance. 
+6.7 Reporting — Shift, Day & Month 
+S!aP generates the shift-wise, day-wise and month-wise dispensing, revenue and performance 
+reports the tender requires, on schedule and on demand, in MEW’s required formats. Because 
+reports are generated from the central historian, figures reconcile across bays, the station and 
+time periods, and across the K-net settlement to the MEW bank account. 
+6.8 Configurability & Extensibility 
+Under Glass Box governance, MEW configures dashboards, KPIs, charging rules, alarm rules, 
+reports, models and roles without vendor intervention. New bays, devices, or additional bulk 
+filling stations across Kuwait are onboarded through configuration — so the platform extends 
+State-wide over time without architectural redesign, protecting the investment. 
+  
+
+
+===== PAGE 18 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 18 
+6.9 Summary 
+The result is a single, centralized window into the whole operation — real-time monitoring, 
+prepaid revenue, surveillance, reporting and AI analytics — delivered above the existing field, 
+CCTV and payment systems, owned and configurable by MEW, and served with full DR 
+resilience. 
+ 
+7 Implementation & Transition Strategy 
+7.1 Implementation Strategy 
+ Delivery is structured to stand up the central platform quickly and onboard the station with 
+minimal disruption — no changes to the RTUs or dispensing control beyond enabling access. 
+In line with §2.9, one filling bay is commissioned and run for one month as a trial to verify 
+functionality before roll -out, followed by a 30 -day reliability trial run of the full station.  
+ 
+7.2 Indicative Timeline 
+An indicative timeline to full go -live is on the order of six months from contract, subject to 
+confirmation at design (field access, WAN, hardware provisioning and MEW resource 
+availability). A detailed, milestone-based schedule accompanies the final propo sal, aligned to 
+the Section 5.4 BOQ. 
+7.3 Scalability & Future Expansion 
+The platform scales by configuration — additional bays, devices, or further bulk filling stations 
+across Kuwait — and its analytics improve over the asset life. MEW retains full ownership of 
+data, historian, dashboards, models and roadmap under the Glass Box model, enabling a State-
+wide water-tanker intelligence programme on one foundation. 
+  
+Phase Time 
+Duration  Key Activities Deliverables 
+Phase 1 — 
+Discovery & 
+Design 
+Week 1-
+3  
+Confirm interfaces, tags, KPIs, 
+charging rules, site requirements 
+and system design. 
+Approved design 
+documents, sizing, 
+drawings and test plans. 
+Phase 2 — 
+Platform & DR 
+Build 
+Week 3-
+7  
+Deploy the central platform and 
+DR site, configure HA, replication, 
+security and integrations. 
+Operational primary and 
+DR platforms with 
+completed FAT. 
+Phase 3 — Pilot 
+& Rollout 
+Week 8-
+14 
+Test one pilot bay, install Edge, 
+connect 42 bays and validate 
+dashboards, alarms and charging. 
+Pilot approval, full station 
+integration and validated 
+reports. 
+Phase 4 — 
+Validation & 
+Go-Live 
+Week 
+15-19  
+Complete testing, DR failover, 
+training, go -live and maintenance 
+handover. 
+SAT approval, trained 
+users, go-live and support 
+transition. 
+
+===== PAGE 19 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 19 
+8 Scope of Work, Assumptions & Exclusions 
+8.1 Scope of Work 
+Astrikos’ scope is the design, supply, configuration, integration, testing, commissioning, 
+training and support of the centralized S!aP platform, comprising: 
+● S!aP platform deployment at the Salmiya data centre (central historian, prepaid 
+billing/analytics, alarm/incident and reporting engine, surveillance integration, 
+command dashboard) with high availability. 
+● A geographically separate DR environment at South Surra with continuous replication 
+of the platform, historian and billing. 
+● A S!aP Connect Edge at the Al Dhaher LCC, integrated to the 42 bay RTUs, cameras, 
+gates, network -flow instruments and the K -net gateway, with stream mapping and 
+store-and-forward over the WAN. 
+● Configuration of the command dashboard, prepaid charging, KPIs, alarm rules, and 
+shift/day/month reports; the MEW web portal and MEW Pay app. 
+● AI analytics — water-loss, predictive maintenance, LPR/leak, fraud and demand — 
+under Glass Box governance. 
+● RBAC/SSO, unlimited-user access, security configuration (ISO/IEC 27001, IEC 62443-
+aligned), training, commissioning, the 1-bay trial and 30-day reliability run, go-live and 
+2-year maintenance. 
+8.2 Assumptions 
+● The bay RTUs expose accessible interfaces (Modbus/OPC -UA) with the required 
+parameters, and access is enabled for the S!aP Edge. 
+● The specialist field hardware (meters, valves, RTUs, cameras, gates, solar network-flow, 
+servers, switches) is supplied and installed by the qualified system -manufacturer sub-
+contractor and OEM partners per §2.9. 
+● MEW provides the Salmiya DC and South Surra DR facilities and either provides 
+infrastructure to the agreed sizing or procures the specified hardware. 
+● K-net gateway access and MEW bank/Ministry of Finance interfaces are made 
+available; tag/stream lists and charging rules are confirmed during design. 
+● MEW engineering and IT resources are available for design, access enablement, 
+validation and acceptance. 
+  
+
+===== PAGE 20 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 20 
+8.3 Exclusions 
+● Supply, modification or maintenance of the field instrumentation, valves, RTUs, 
+cameras, NVRs, gate barriers, solar network -flow hardware or servers, except where 
+explicitly included in the commercial schedule. 
+● Any control, command or write-back to the dispensing loop — the platform is read-only 
+and analytics/billing-only towards the field. 
+● Civil works, ducts, trays and cabling (per §2.8) unless explicitly included. 
+● Third-party licences (e.g. OS, database where MEW-standardised) and the K-net/bank 
+transaction fees unless explicitly included. 
+9 Reference Implementations 
+ 
+Astrikos and S!aP are deployed across utility, industrial and infrastructure environments 
+where the platform layers above existing control, metering, surveillance and payment systems 
+to deliver centralized monitoring, revenue assurance and AI analytics. Re levant references in 
+water/utilities and revenue -assurance contexts — including OPC/Modbus integration to 
+existing field systems, prepaid billing and multi -site aggregation — will be shared under NDA 
+with the formal proposal, with contactable client refere nces on request.  
+ 
+10 Why Astrikos 
+● Above the field, not a replacement connects via standard protocols; RTUs, valves, 
+cameras and gateways untouched; no rip-and-replace. 
+● One platform, whole operation: a single central historian, dashboard, prepaid revenue 
+engine and surveillance view across the station, DR-resilient. 
+● AI, not just trends: water-loss, predictive maintenance, LPR/leak and fraud analytics 
+under explainable Glass Box governance. 
+● Open & sovereign: open historian, no per-tag lock-in, unlimited users; MEW owns data, 
+logic and roadmap; State-wide extensible. 
+● Certified & proven: patented technology, ISO/IEC 27001 and IEC 62443-aligned, with 
+regional delivery experience.  
+
+===== PAGE 21 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 21 
+11 Commercial Structure, Licensing & Support 
+ 
+S!aP license and Platform Implementation Services For the Simplex option 
+ 
+All Prices in USD Qty Unit Price in USD Total Price in USD Remarks 
+S!aP License - AAI-S!aP-LIC 
+Perpetual  
+S!aP License includes 
+• S!aP Konnect 
+• S!aP Datalake 
+• S!aP BPM 
+• S!aP ML & AI Central 
+• S!aP Viz 
+• S!aP Agentic 
+ 
+ 
+ 
+ 
+1 
+ 
+ 
+ 
+112,000.00 
+ 
+ 
+ 
+112,000.00 
+ 
+S!ap Installation and Configuration 
+Integration services: 
+• Platform Installation 
+• Platform Configuration 
+• Sub-System Integration 
+• Users and Security Configuration 
+• Dashboard building 
+ 
+ 
+ 
+1 
+ 
+ 
+ 
+90,000.00 
+ 
+ 
+ 
+90,000.00 
+ 
+Total in USD $ 202,000.00 
+ 
+S!aP license and Platform Implementation Services for the Duplex option 
+ 
+All Prices in USD Qty Unit Price in USD Total Price in USD Remarks 
+S!aP License - AAI-S!aP-LIC 
+Perpetual DC & DR 
+S!aP License includes 
+• S!aP Konnect 
+• S!aP Datalake 
+• S!aP BPM 
+• S!aP ML & AI Central 
+• S!aP Viz 
+• S!aP Agentic 
+ 
+ 
+ 
+ 
+2 
+ 
+ 
+ 
+140,000.00 
+ 
+ 
+ 
+140,000.00 
+ 
+S!ap Installation and Configuration 
+Integration services: 
+• Platform Installation 
+• Platform Configuration 
+• Sub-System Integration 
+• Users and Security Configuration 
+• Dashboard building 
+ 
+ 
+ 
+1 
+ 
+ 
+ 
+90,000.00 
+ 
+ 
+ 
+90,000.00 
+ 
+Total in USD $ 230,000.00 
+ 
+
+===== PAGE 22 =====
+ 
+Astrikos AI Technologies Limited · www.astrikos.ai Commercial-in-Confidence · Page 22 
+ 
+ 
+Hardware Price 
+ 
+ 
+Offer Validity: This offer shall remain valid until 31 August 2026. 
+ 
+     Payment Terms Milestone  
+       Payments Milestone – I 
+License Delivery: 100% of the licensing cost should be paid after the 
+delivery of the product licenses. 
+       Milestone – II 
+        Services 
+▪ Mobilization advances -20% 
+▪ Platform installation and commissioning – 20% 
+▪ Subsystem Integration and customization – 50% 
+▪ UAT and Go-Live – 10% 
+Note: For Hardware Supply should be 50% advance along with 
+PO and 50% against delivering the hardware                                                 
+                                         Astrikos AI Technologies Limited 
+connect@astrikos.ai · www.astrikos.ai · Think it. Ask it. Act on it. 
+Commercial-in-Confidence. The S!aP platform embodies patented technology and proprietary methods of Astrikos AI. 
+S!aP support and Maintenance 1st Year 2nd year 3rd year Total 
+• Yearly Support Charges 24,000.00 25,200.00 26,460.00 75,660.00 
+Total in USD $ 75,660.00 
+Description Qty. Unit Price in USD Total Price in USD 
+Processor, 2 × Intel Xeon Gold 5418Y (12 
+Cores, 2.0 GHz) or 2 × Intel Xeon Gold 6526Y 
+(12 Cores, 2.8 GHz)"24 Physical Cores" 64 GB 
+DDR5 ECC RDIMM (2× 32 GB, expandable) 
+RAM, 1 × 2 TB Enterprise SSD (RAID-1) and 4 
+× 4 TB Enterprise HDD (RAID-1), A 100 GPU 
+ 
+ 
+2 
+ 
+ 
+21,800.00 
+ 
+ 
+43,600.00 
+Total $ 43,600.00 

@@ -4,7 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>S!aP — MEW Al Dhaher Water Filling Station</title>
-<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="styles.css?v=4" />
+<link rel="stylesheet" href="modules.css?v=1" />
+<!-- Three.js r0.186.0 is vendored locally (offline-safe) and resolved through this import map -->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
 <script src="vendor/lucide.min.js"></script>
 <script src="vendor/chart.umd.js"></script>
 </head>
@@ -20,17 +25,19 @@
     </div>
   </div>
 
-  <div class="nav-group-label">Operations</div>
-  <div class="nav-item active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Command Dashboard</div>
-  <div class="nav-item" data-view="baycontrol"><i data-lucide="gauge"></i> Filling Bay Control</div>
-  <div class="nav-item" data-view="cctv"><i data-lucide="camera"></i> CCTV &amp; LPR Wall</div>
+  <div class="nav-group-label" id="nav-group-operations">Operations</div>
+  <div class="nav-item active" data-view="dashboard" tabindex="0" role="button" aria-label="Command Dashboard" title="Command Dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-label"> Command Dashboard</span></div>
+  <div class="nav-item" data-view="baycontrol" tabindex="0" role="button" aria-label="Filling Bay Control" title="Filling Bay Control"><i data-lucide="gauge"></i><span class="nav-label"> Filling Bay Control</span></div>
+  <div class="nav-item" data-view="twin" tabindex="0" role="button" aria-label="Digital Twin" title="Digital Twin"><i data-lucide="workflow"></i><span class="nav-label"> Digital Twin</span></div>
+  <div class="nav-item" data-view="cctv" tabindex="0" role="button" aria-label="CCTV and LPR Wall" title="CCTV & LPR Wall"><i data-lucide="camera"></i><span class="nav-label"> CCTV &amp; LPR Wall</span></div>
 
-  <div class="nav-group-label">Revenue &amp; Customer</div>
-  <div class="nav-item" data-view="billing"><i data-lucide="wallet"></i> Billing &amp; MEW Pay</div>
-  <div class="nav-item" data-view="reports"><i data-lucide="file-bar-chart"></i> Reports</div>
+  <div class="nav-group-label" id="nav-group-revenue">Revenue &amp; Customer</div>
+  <div class="nav-item" data-view="billing" tabindex="0" role="button" aria-label="Billing and MEW Pay" title="Billing & MEW Pay"><i data-lucide="wallet"></i><span class="nav-label"> Billing &amp; MEW Pay</span></div>
+  <div class="nav-item" data-view="reports" tabindex="0" role="button" aria-label="Reports" title="Reports"><i data-lucide="file-bar-chart"></i><span class="nav-label"> Reports</span></div>
 
-  <div class="nav-group-label">Intelligence</div>
-  <div class="nav-item" data-view="sia"><i data-lucide="sparkles"></i> S!a — Ask &amp; Act</div>
+  <div class="nav-group-label" id="nav-group-intelligence">Intelligence</div>
+  <div class="nav-group-label" id="nav-group-erp">Enterprise &amp; ERP</div>
+  <div class="nav-item" data-view="sia" tabindex="0" role="button" aria-label="S!a — Ask and Act" title="S!a — Ask & Act"><i data-lucide="sparkles"></i><span class="nav-label"> S!a — Ask &amp; Act</span></div>
 
   <div class="sidebar-footer">
     <div class="avatar-chip">TD</div>
@@ -63,27 +70,27 @@
     <section class="view active" id="view-dashboard">
       <div class="kpi-row">
         <div class="kpi-card">
-          <div class="kpi-label">Active Filling Bays</div>
+          <div class="kpi-top"><div class="kpi-icon"><i data-lucide="gauge"></i></div><div class="kpi-label">Active Filling Bays</div></div>
           <div class="kpi-value" id="kpi-active">18<span class="kpi-unit">/42</span></div>
           <div class="kpi-delta up" id="kpi-active-delta">&#9650; live</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Water Dispensed Today</div>
+          <div class="kpi-top"><div class="kpi-icon blue"><i data-lucide="droplets"></i></div><div class="kpi-label">Water Dispensed Today</div></div>
           <div class="kpi-value" id="kpi-volume">1.84<span class="kpi-unit">M Imp.gal</span></div>
           <div class="kpi-delta up">&#9650; 4.2% vs yday</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Revenue Collected</div>
+          <div class="kpi-top"><div class="kpi-icon green"><i data-lucide="banknote"></i></div><div class="kpi-label">Revenue Collected</div></div>
           <div class="kpi-value" id="kpi-revenue">KD 22,140</div>
           <div class="kpi-delta up">&#9650; 3.1%</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Tankers Served</div>
+          <div class="kpi-top"><div class="kpi-icon"><i data-lucide="truck"></i></div><div class="kpi-label">Tankers Served</div></div>
           <div class="kpi-value" id="kpi-tankers">613</div>
           <div class="kpi-delta up">&#9650; in queue: 4</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Open Alarms</div>
+          <div class="kpi-top"><div class="kpi-icon red"><i data-lucide="siren"></i></div><div class="kpi-label">Open Alarms</div></div>
           <div class="kpi-value" id="kpi-alarms">3</div>
           <div class="kpi-delta warn">1 critical</div>
         </div>
@@ -92,6 +99,35 @@
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title">S!aP System Architecture &amp; Data Flow <span class="hint">Operators (Al Dhaher LCC) &middot; Salmiya Central Control &middot; Tanker Owners (MEW Pay) &middot; MEW Management</span></div>
         <div id="arch-diagram"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">ERP Integration &mdash; Future-State <span class="tag green">Connected &middot; ERP System</span></div>
+        <div class="erp-flow">
+          <div class="erp-box">
+            <div class="erp-box-icon"><i data-lucide="layout-dashboard"></i></div>
+            S!aP Platform
+          </div>
+          <div class="erp-links">
+            <div class="erp-link">Invoices &amp; GL postings <i data-lucide="arrow-right"></i></div>
+            <div class="erp-link"><i data-lucide="arrow-left"></i> Account &amp; tanker master data</div>
+            <div class="erp-link"><i data-lucide="arrow-left"></i> Inventory &amp; stock levels</div>
+          </div>
+          <div class="erp-box alt">
+            <div class="erp-box-icon"><i data-lucide="database"></i></div>
+            ERP System
+          </div>
+        </div>
+        <table class="data-table" style="margin-top:14px;">
+          <thead><tr><th>Time</th><th>Object</th><th>Direction</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">21:08</td><td>GL Posting &mdash; Daily Revenue</td><td>S!aP &rarr; ERP</td><td><span class="tag green">Synced</span></td></tr>
+            <tr><td class="mono">20:41</td><td>Tanker Master &mdash; KWT-40216</td><td>ERP &rarr; S!aP</td><td><span class="tag green">Synced</span></td></tr>
+            <tr><td class="mono">19:55</td><td>Invoice #INV-88213</td><td>S!aP &rarr; ERP</td><td><span class="tag green">Synced</span></td></tr>
+            <tr><td class="mono">18:30</td><td>Stock Level &mdash; Al Dhaher</td><td>ERP &rarr; S!aP</td><td><span class="tag amber">Pending</span></td></tr>
+          </tbody>
+        </table>
+        <div class="util-text" style="margin-top:10px;">Illustrative &mdash; shows how S!aP integrates with MEW's ERP landscape (SAP/Oracle-class systems) for finance and master-data sync. No live ERP connection in this demo.</div>
       </div>
 
       <div class="card" style="margin-bottom:16px;">
@@ -113,9 +149,14 @@
         <div class="card">
           <div class="card-title">S!aP Viz &mdash; Station Inlet Flow</div>
           <div class="gauge-wrap">
-            <div class="chart-box" style="height:140px; width:220px;"><canvas id="gauge-chart"></canvas></div>
-            <div class="gauge-value" id="gauge-value">742</div>
-            <div class="gauge-unit">m&sup3;/h</div>
+            <div class="gauge-canvas-box">
+              <canvas id="gauge-chart"></canvas>
+              <div class="gauge-center">
+                <div class="gauge-value" id="gauge-value">742</div>
+                <div class="gauge-unit">m&sup3;/h</div>
+              </div>
+            </div>
+            <div class="gauge-scale"><span>0</span><span>500</span><span>1000</span></div>
           </div>
           <div class="gauge-sub">
             <div>Inlet press: <b id="gauge-pressure">5.9 bar</b></div>
@@ -160,6 +201,7 @@
           <div style="display:flex; gap:10px; margin-top:14px;">
             <button class="btn btn-green" id="btn-start-fill"><i data-lucide="play"></i> Filling</button>
             <button class="btn btn-red" id="btn-stop-fill"><i data-lucide="square"></i> Stop</button>
+            <button class="btn" id="btn-view-twin"><i data-lucide="workflow"></i> View Digital Twin</button>
           </div>
           <div class="util-text" style="margin-top:10px;">Real-time control via S!aP Connect &middot; RTU &middot; Live offline cutover on last-known balance if WAN drops.</div>
         </div>
@@ -171,7 +213,7 @@
           <div class="metric-line"><span class="k">Auth method</span><span class="v">QR + PIN</span></div>
           <div class="metric-line"><span class="k">License plate</span><span class="v mono" id="bc-plate">3 / 84621</span></div>
           <div class="metric-line"><span class="k">Date / Time</span><span class="v" id="bc-datetime">23-Jul 08:41</span></div>
-          <div class="metric-line"><span class="k">Wallet balance (pre)</span><span class="v">KD 148.500</span></div>
+          <div class="metric-line"><span class="k">Wallet balance (pre)</span><span class="v" id="bc-balance-pre">KD 148.500</span></div>
           <div class="metric-line"><span class="k">Est. charge</span><span class="v" id="bc-charge">KD 8.550</span></div>
           <div class="metric-line"><span class="k">Balance on completion</span><span class="v" id="bc-balance">KD 139.950</span></div>
           <div style="margin-top:14px; padding:10px 12px; background:var(--accent-dim); border:1px solid rgba(34,211,238,0.3); border-radius:8px; font-size:11.5px; color:var(--accent);">
@@ -179,6 +221,20 @@
             S!a live guidance: Hatch alignment confirmed by arm-camera. Filling nominal &mdash; no surge on valve open. Receipt auto-sends to +965 &middot;&middot;&middot;6873 &amp; email on completion.
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW: DIGITAL TWIN ================= -->
+    <section class="view" id="view-twin">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Select Bay
+          <select class="select" id="twin-bay-select"></select>
+        </div>
+        <div class="util-text">Live instrumented flow for one bay &mdash; tanker arrival through debit &amp; receipt. Every value below is read from the same telemetry driving the rest of S!aP &mdash; nothing here is a separate system.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">End-to-End Filling Flow <span class="hint" id="twin-hint">Bay 14 &middot; live</span></div>
+        <div id="twin-diagram"></div>
       </div>
     </section>
 
@@ -207,22 +263,22 @@
     <section class="view" id="view-billing">
       <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
         <div class="kpi-card">
-          <div class="kpi-label">Revenue &mdash; Month to Date</div>
+          <div class="kpi-top"><div class="kpi-icon green"><i data-lucide="banknote"></i></div><div class="kpi-label">Revenue &mdash; Month to Date</div></div>
           <div class="kpi-value">KD 486,320</div>
           <div class="kpi-delta up">&#9650; 7.4%</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">K-net Top-ups Today</div>
+          <div class="kpi-top"><div class="kpi-icon blue"><i data-lucide="credit-card"></i></div><div class="kpi-label">K-net Top-ups Today</div></div>
           <div class="kpi-value" id="kpi-topups">1,027</div>
           <div class="kpi-delta up">&#9650; 2.1%</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Active Wallets</div>
+          <div class="kpi-top"><div class="kpi-icon"><i data-lucide="wallet"></i></div><div class="kpi-label">Active Wallets</div></div>
           <div class="kpi-value">8,942</div>
           <div class="kpi-delta">234 new / 30d</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Settlement to MEW</div>
+          <div class="kpi-top"><div class="kpi-icon green"><i data-lucide="check-check"></i></div><div class="kpi-label">Settlement to MEW</div></div>
           <div class="kpi-value" style="color:var(--green); font-size:20px;">Reconciled</div>
           <div class="kpi-delta up">100% matched</div>
         </div>
@@ -237,20 +293,24 @@
           </table>
         </div>
         <div class="card">
-          <div class="card-title">MEW Pay &mdash; Customer App</div>
-          <div style="background:var(--panel-alt); border:1px solid var(--border); border-radius:14px; padding:16px;">
+          <div class="card-title">MEW Pay &mdash; Customer App <span class="hint">fully interactive on your phone</span></div>
+          <div class="wallet-panel">
             <div style="font-size:11px; color:var(--text-dim);">Water Wallet Balance</div>
             <div style="font-size:26px; font-weight:800; color:var(--accent); margin:4px 0 2px;" id="mew-balance">KD 139.950</div>
             <div style="font-size:11px; color:var(--text-dim);">Al-Salem Transport &middot; Acct KWT-40216</div>
             <div style="display:flex; gap:8px; margin-top:14px;">
-              <button class="btn btn-sm btn-primary" style="flex:1; justify-content:center;">Top-up</button>
-              <button class="btn btn-sm" style="flex:1; justify-content:center;">QR Pay</button>
-              <button class="btn btn-sm" style="flex:1; justify-content:center;">Stations</button>
-              <button class="btn btn-sm" style="flex:1; justify-content:center;">History</button>
+              <a href="mobile.html?screen=topup" target="_blank" class="btn btn-sm btn-primary" style="flex:1; justify-content:center;">Top-up</a>
+              <a href="mobile.html?screen=qr" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">QR Pay</a>
+              <a href="mobile.html?screen=stations" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">Stations</a>
+              <a href="mobile.html?screen=history" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">History</a>
             </div>
             <div style="margin-top:16px; font-size:11px; color:var(--text-dim);">Recent</div>
             <div id="mew-activity" style="margin-top:6px;"></div>
             <div style="margin-top:14px; font-size:10.5px; color:var(--text-faint);">Android &amp; iOS &middot; EN / AR &middot; K-net</div>
+          </div>
+          <div class="mobile-open-row">
+            <div><i data-lucide="smartphone"></i> Open the full MEW Pay companion on a phone</div>
+            <a href="mobile.html" target="_blank" class="btn btn-sm">Open on phone &rarr;</a>
           </div>
         </div>
       </div>
@@ -261,9 +321,9 @@
       <div class="card">
         <div class="card-title">Reporting &mdash; Shift, Day &amp; Month <span class="hint">generated from the S!aP central historian &middot; scheduled or on demand</span></div>
         <div class="report-tabs">
-          <div class="report-tab active" data-period="shift">Shift-wise</div>
-          <div class="report-tab" data-period="day">Day-wise</div>
-          <div class="report-tab" data-period="month">Month-wise</div>
+          <div class="report-tab active" data-period="shift" tabindex="0" role="button" aria-label="Shift-wise report">Shift-wise</div>
+          <div class="report-tab" data-period="day" tabindex="0" role="button" aria-label="Day-wise report">Day-wise</div>
+          <div class="report-tab" data-period="month" tabindex="0" role="button" aria-label="Month-wise report">Month-wise</div>
         </div>
         <div class="grid-2" style="align-items:start;">
           <table class="data-table">
@@ -319,7 +379,34 @@
   </div>
 </main>
 
-<script src="data.js"></script>
-<script src="app.js"></script>
+<!-- ============ FLOATING AI ASSISTANT ============ -->
+<button class="ai-fab" id="ai-fab" title="Ask S!a" aria-label="Ask S!a — AI assistant">
+  <i data-lucide="sparkles"></i>
+</button>
+
+<div class="ai-panel" id="ai-panel">
+  <div class="ai-panel-header">
+    <div class="ai-panel-title"><i data-lucide="sparkles"></i> S!a &mdash; Ask it. Act on it.</div>
+    <div class="ai-panel-close" id="ai-panel-close"><i data-lucide="x"></i></div>
+  </div>
+  <div class="chat-window" id="ai-panel-window"></div>
+  <div class="ai-panel-chips" id="ai-panel-chips">
+    <span class="suggest-chip" data-q="Which bays are underperforming today?">Underperforming bays?</span>
+    <span class="suggest-chip" data-q="Forecast tomorrow's peak demand">Forecast peak demand</span>
+    <span class="suggest-chip" data-q="Any accounts flagged for fraud?">Fraud flags?</span>
+  </div>
+  <div class="chat-input-row ai-panel-input-row">
+    <input type="text" id="ai-panel-input" placeholder="Ask S!a about operations, revenue, assets..." />
+    <button class="btn btn-primary" id="ai-panel-send" aria-label="Send"><i data-lucide="send"></i></button>
+  </div>
+</div>
+
+<script src="data.js?v=4"></script>
+<script src="app.js?v=4"></script>
+<!-- Feature modules — each registers its own screens via SIAP.registerView(); see docs/IMPLEMENTATION_PLAN.md -->
+<script src="erp-data.js?v=1"></script>
+<script src="erp.js?v=1"></script>
+<script src="hmi.js?v=1"></script>
+<script type="module" src="twin3d.js?v=1"></script>
 </body>
 </html>
