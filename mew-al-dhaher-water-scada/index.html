@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>S!aP — MEW Al Dhaher Water Filling Station</title>
-<link rel="stylesheet" href="styles.css?v=4" />
-<link rel="stylesheet" href="modules.css?v=1" />
+<link rel="stylesheet" href="styles.css?v=5" />
+<link rel="stylesheet" href="modules.css?v=2" />
 <!-- Three.js r0.186.0 is vendored locally (offline-safe) and resolved through this import map -->
 <script type="importmap">
 { "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
@@ -57,6 +57,7 @@
     </div>
     <div class="topbar-right">
       <div class="live-pill"><span class="live-dot"></span> LIVE</div>
+      <button class="btn btn-sm" id="btn-wan-toggle" title="Demo: force the Al Dhaher LCC WAN links offline"><i data-lucide="wifi-off"></i> Simulate WAN loss</button>
       <div>Salmiya DC &rarr; DR South Surra</div>
       <div class="clock" id="clock">--:--:--</div>
     </div>
@@ -102,32 +103,10 @@
       </div>
 
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-title">ERP Integration &mdash; Future-State <span class="tag green">Connected &middot; ERP System</span></div>
-        <div class="erp-flow">
-          <div class="erp-box">
-            <div class="erp-box-icon"><i data-lucide="layout-dashboard"></i></div>
-            S!aP Platform
-          </div>
-          <div class="erp-links">
-            <div class="erp-link">Invoices &amp; GL postings <i data-lucide="arrow-right"></i></div>
-            <div class="erp-link"><i data-lucide="arrow-left"></i> Account &amp; tanker master data</div>
-            <div class="erp-link"><i data-lucide="arrow-left"></i> Inventory &amp; stock levels</div>
-          </div>
-          <div class="erp-box alt">
-            <div class="erp-box-icon"><i data-lucide="database"></i></div>
-            ERP System
-          </div>
-        </div>
-        <table class="data-table" style="margin-top:14px;">
-          <thead><tr><th>Time</th><th>Object</th><th>Direction</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td class="mono">21:08</td><td>GL Posting &mdash; Daily Revenue</td><td>S!aP &rarr; ERP</td><td><span class="tag green">Synced</span></td></tr>
-            <tr><td class="mono">20:41</td><td>Tanker Master &mdash; KWT-40216</td><td>ERP &rarr; S!aP</td><td><span class="tag green">Synced</span></td></tr>
-            <tr><td class="mono">19:55</td><td>Invoice #INV-88213</td><td>S!aP &rarr; ERP</td><td><span class="tag green">Synced</span></td></tr>
-            <tr><td class="mono">18:30</td><td>Stock Level &mdash; Al Dhaher</td><td>ERP &rarr; S!aP</td><td><span class="tag amber">Pending</span></td></tr>
-          </tbody>
-        </table>
-        <div class="util-text" style="margin-top:10px;">Illustrative &mdash; shows how S!aP integrates with MEW's ERP landscape (SAP/Oracle-class systems) for finance and master-data sync. No live ERP connection in this demo.</div>
+        <div class="card-title">ERP Integration &mdash; Enterprise &amp; ERP <span class="tag green">Connected &middot; SAP &middot; Oracle &middot; D365</span></div>
+        <div class="util-text">S!aP now runs a full order-to-cash ERP workflow &mdash; purchase orders, fleet &amp; driver registration, access credentials, tariffs and a live connector sync log &mdash; not just monitoring.</div>
+        <div class="util-text">Open <b>Enterprise &amp; ERP</b> in the sidebar, or jump straight to the connector tiles, object mapping and sync log.</div>
+        <button class="btn btn-primary btn-sm" id="dash-erp-link" style="margin-top:10px;"><i data-lucide="plug-zap"></i> Open ERP Integration</button>
       </div>
 
       <div class="card" style="margin-bottom:16px;">
@@ -199,11 +178,11 @@
           <div class="metric-line"><span class="k">Meter accuracy (custody)</span><span class="v">&plusmn;0.18%</span></div>
           <div class="metric-line"><span class="k">Mode</span><span class="v">Auto &middot; fine-fill top-up</span></div>
           <div style="display:flex; gap:10px; margin-top:14px;">
-            <button class="btn btn-green" id="btn-start-fill"><i data-lucide="play"></i> Filling</button>
-            <button class="btn btn-red" id="btn-stop-fill"><i data-lucide="square"></i> Stop</button>
+            <button class="btn btn-green" id="btn-start-fill"><i data-lucide="play"></i> Authorize fill</button>
+            <button class="btn btn-red" id="btn-stop-fill"><i data-lucide="square"></i> Release &amp; close</button>
             <button class="btn" id="btn-view-twin"><i data-lucide="workflow"></i> View Digital Twin</button>
           </div>
-          <div class="util-text" style="margin-top:10px;">Real-time control via S!aP Connect &middot; RTU &middot; Live offline cutover on last-known balance if WAN drops.</div>
+          <div class="util-text" style="margin-top:10px;">S!aP BPM authorises the transaction and releases the hold; the bay RTU executes valve control locally &mdash; the platform is read-only towards the control loop and continues on last-known balance if the WAN drops.</div>
         </div>
 
         <div class="card">
@@ -298,11 +277,12 @@
             <div style="font-size:11px; color:var(--text-dim);">Water Wallet Balance</div>
             <div style="font-size:26px; font-weight:800; color:var(--accent); margin:4px 0 2px;" id="mew-balance">KD 139.950</div>
             <div style="font-size:11px; color:var(--text-dim);">Al-Salem Transport &middot; Acct KWT-40216</div>
-            <div style="display:flex; gap:8px; margin-top:14px;">
-              <a href="mobile.html?screen=topup" target="_blank" class="btn btn-sm btn-primary" style="flex:1; justify-content:center;">Top-up</a>
-              <a href="mobile.html?screen=qr" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">QR Pay</a>
-              <a href="mobile.html?screen=stations" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">Stations</a>
-              <a href="mobile.html?screen=history" target="_blank" class="btn btn-sm" style="flex:1; justify-content:center;">History</a>
+            <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+              <a href="mobile.html?screen=topup" target="_blank" class="btn btn-sm btn-primary" style="flex:1 1 40%; justify-content:center;">Top-up</a>
+              <a href="mobile.html?screen=qr" target="_blank" class="btn btn-sm" style="flex:1 1 40%; justify-content:center;">QR Pay</a>
+              <a href="mobile.html?screen=stations" target="_blank" class="btn btn-sm" style="flex:1 1 40%; justify-content:center;">Stations</a>
+              <a href="mobile.html?screen=history" target="_blank" class="btn btn-sm" style="flex:1 1 40%; justify-content:center;">History</a>
+              <a href="mobile.html?screen=receipt" target="_blank" class="btn btn-sm" style="flex:1 1 40%; justify-content:center;">Receipt</a>
             </div>
             <div style="margin-top:16px; font-size:11px; color:var(--text-dim);">Recent</div>
             <div id="mew-activity" style="margin-top:6px;"></div>
@@ -333,12 +313,40 @@
           <div class="chart-box" style="height:260px;"><canvas id="report-chart"></canvas></div>
         </div>
         <div style="display:flex; gap:10px; margin-top:16px;">
-          <button class="btn btn-primary"><i data-lucide="download"></i> Export PDF</button>
-          <button class="btn"><i data-lucide="sheet"></i> Export CSV</button>
-          <button class="btn"><i data-lucide="calendar-clock"></i> Schedule Report</button>
+          <button class="btn btn-primary" id="btn-export-pdf"><i data-lucide="download"></i> Export PDF</button>
+          <button class="btn" id="btn-export-csv"><i data-lucide="sheet"></i> Export CSV</button>
+          <button class="btn" id="btn-schedule-report"><i data-lucide="calendar-clock"></i> Schedule Report</button>
         </div>
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); margin:20px 0 8px;">Scheduled Reports</div>
+        <div id="scheduled-reports-list" class="scheduled-list"></div>
       </div>
     </section>
+
+    <div class="modal-overlay" id="schedule-modal" hidden>
+      <div class="modal-box">
+        <h3>Schedule Report</h3>
+        <div class="modal-field">
+          <label>Period</label>
+          <select class="select" id="schedule-period" style="width:100%;">
+            <option value="shift">Shift-wise</option>
+            <option value="day">Day-wise</option>
+            <option value="month">Month-wise</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label>Time (daily)</label>
+          <input type="time" id="schedule-time" value="07:00" />
+        </div>
+        <div class="modal-field">
+          <label>E-mail recipients</label>
+          <input type="text" id="schedule-emails" placeholder="ops@mew.gov.kw, dept@mew.gov.kw" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn" id="schedule-modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="schedule-modal-save">Save Schedule</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ================= VIEW: S!A ================= -->
     <section class="view" id="view-sia">
@@ -404,9 +412,9 @@
 <script src="data.js?v=4"></script>
 <script src="app.js?v=4"></script>
 <!-- Feature modules — each registers its own screens via SIAP.registerView(); see docs/IMPLEMENTATION_PLAN.md -->
-<script src="erp-data.js?v=1"></script>
-<script src="erp.js?v=1"></script>
-<script src="hmi.js?v=1"></script>
-<script type="module" src="twin3d.js?v=1"></script>
+<script src="erp-data.js?v=2"></script>
+<script src="erp.js?v=2"></script>
+<script src="hmi.js?v=2"></script>
+<script type="module" src="twin3d.js?v=2"></script>
 </body>
 </html>

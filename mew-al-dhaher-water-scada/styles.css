@@ -685,3 +685,33 @@ table.data-table tr:hover td { background: rgba(255,255,255,0.02); }
   .sidebar-footer { justify-content: center; padding: 10px 0; }
   .sidebar-footer > div:last-child { display: none; }
 }
+
+/* ---------- WP-D: offline banner variants, schedule modal, print ---------- */
+/* pre-existing #alarm-banner{display:flex} always beat the [hidden] UA rule — needed so the
+   WAN-restored banner (and normal alarm banner) actually disappear when set hidden again. */
+.alarm-banner[hidden] { display: none; }
+.alarm-banner.amber { background: linear-gradient(90deg, rgba(251,191,36,0.18), rgba(251,191,36,0.05)); border-bottom-color: rgba(251,191,36,0.4); color: #ffe9b3; }
+.alarm-banner.amber .dot { background: var(--amber); }
+.alarm-banner.green { background: linear-gradient(90deg, rgba(52,211,153,0.18), rgba(52,211,153,0.05)); border-bottom-color: rgba(52,211,153,0.4); color: #c9f7e3; }
+.alarm-banner.green .dot { background: var(--green); }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(4,10,20,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.modal-overlay[hidden] { display: none; }
+.modal-box { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px; padding: 20px; width: 360px; max-width: 92vw; box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
+.modal-box h3 { font-size: 14px; margin: 0 0 14px; }
+.modal-field { margin-bottom: 12px; }
+.modal-field label { display: block; font-size: 10.5px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px; }
+.modal-field input, .modal-field select { width: 100%; background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 12.5px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+.scheduled-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.scheduled-row:last-child { border-bottom: none; }
+
+@media print {
+  .sidebar, .topbar, .ai-fab, .ai-panel, .alarm-banner, .modal-overlay { display: none !important; }
+  body { display: block !important; background: #fff !important; color: #000 !important; }
+  .main { width: 100% !important; }
+  .card { border: 1px solid #ccc !important; background: #fff !important; box-shadow: none !important; color: #000 !important; }
+  .view { display: none !important; }
+  .view.active { display: block !important; }
+  #view-reports .report-tabs, #btn-export-pdf, #btn-export-csv, #btn-schedule-report { display: none !important; }
+}

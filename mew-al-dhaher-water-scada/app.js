@@ -7,6 +7,12 @@ let hourlyChart, gaugeChart, reportChart;
 let currentReportPeriod = "shift";
 let appReady = false;
 
+/* ---- WP-D: offline / store-and-forward demo state ---- */
+let wanForced = false;       // true while "Simulate WAN loss" is toggled on
+let wanBufferedCount = 0;    // buffered-transaction counter shown in the banner
+let wanRestoredMsg = null;   // transient "WAN restored" banner text, or null
+let wanRestoredTimer = null;
+
 /* ================= VIEW REGISTRY + EVENT BUS (extension point for modules) =================
    Feature modules (twin3d.js, hmi.js, erp.js, ...) register their own screens here so the
    core app never needs editing when a module is added:
@@ -95,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   wireBilling();
   wireReports();
   wireSia();
+  wireWanToggle();
 
   renderBayGrid();
   renderAlarms();
@@ -246,6 +253,21 @@ function updateOpenAlarmsKpi() {
 
 function renderAlarmBanner() {
   const banner = document.getElementById("alarm-banner");
+  // WP-D: while a simulated WAN outage is forced, the offline banner takes priority
+  // over the normal critical-alarm banner (reuses the same .alarm-banner styling).
+  if (wanForced) {
+    banner.hidden = false;
+    banner.className = "alarm-banner amber";
+    banner.innerHTML = `<span class="dot"></span> Al Dhaher LCC offline — 42 bays continue on last-known balance · ${wanBufferedCount} transaction${wanBufferedCount === 1 ? "" : "s"} buffered (store-and-forward)`;
+    return;
+  }
+  if (wanRestoredMsg) {
+    banner.hidden = false;
+    banner.className = "alarm-banner green";
+    banner.innerHTML = `<span class="dot"></span> ${wanRestoredMsg}`;
+    return;
+  }
+  banner.className = "alarm-banner";
   const crit = state.alarms.filter(a => !a.ack && a.sev === "crit");
   if (crit.length === 0) { banner.hidden = true; return; }
   banner.hidden = false;
@@ -257,6 +279,49 @@ function renderAlarmBanner() {
   banner.querySelector("[data-jump-alarms]").addEventListener("click", () => {
     document.querySelector('.nav-item[data-view="dashboard"]').click();
     document.getElementById("alarm-list").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+/* ================= WP-D: OFFLINE / STORE-AND-FORWARD DEMO ================= */
+function wireWanToggle() {
+  const btn = document.getElementById("btn-wan-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    if (!wanForced) {
+      wanForced = true;
+      wanBufferedCount = 0;
+      wanRestoredMsg = null;
+      clearTimeout(wanRestoredTimer);
+      state.kpis.wanLinkA = "down";
+      state.kpis.wanLinkB = "down";
+      updateArchLiveBadges();
+      renderAlarmBanner();
+      btn.classList.add("btn-red");
+      btn.innerHTML = `<i data-lucide="wifi-off"></i> WAN loss: ON`;
+    } else {
+      wanForced = false;
+      const replayed = wanBufferedCount;
+      state.ledger.forEach(r => { if (r.status === "Buffered") r.status = "Posted"; });
+      renderLedger();
+      state.kpis.wanLinkA = "up";
+      state.kpis.wanLinkB = "up";
+      state.kpis.drSync = "syncing";
+      state.kpis.drLagSec = 2;
+      updateArchLiveBadges();
+      wanRestoredMsg = `WAN restored — replayed ${replayed} buffered transaction${replayed === 1 ? "" : "s"} to Salmiya · DR RPO 0 s`;
+      renderAlarmBanner();
+      clearTimeout(wanRestoredTimer);
+      wanRestoredTimer = setTimeout(() => {
+        wanRestoredMsg = null;
+        state.kpis.drSync = "synced";
+        state.kpis.drLagSec = 0;
+        updateArchLiveBadges();
+        renderAlarmBanner();
+      }, 4000);
+      btn.classList.remove("btn-red");
+      btn.innerHTML = `<i data-lucide="wifi-off"></i> Simulate WAN loss`;
+    }
+    lucide.createIcons();
   });
 }
 
@@ -979,6 +1044,83 @@ function wireReports() {
       renderReportChart();
     });
   });
+
+  document.getElementById("btn-export-csv")?.addEventListener("click", exportReportCsv);
+  document.getElementById("btn-export-pdf")?.addEventListener("click", () => window.print());
+  document.getElementById("btn-schedule-report")?.addEventListener("click", openScheduleModal);
+  document.getElementById("schedule-modal-cancel")?.addEventListener("click", closeScheduleModal);
+  document.getElementById("schedule-modal-save")?.addEventListener("click", saveScheduleReport);
+  document.getElementById("schedule-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "schedule-modal") closeScheduleModal();
+  });
+
+  renderScheduledReports();
+}
+
+/* ---- WP-D: real CSV export for the active report period ---- */
+function exportReportCsv() {
+  const r = state.reports[currentReportPeriod];
+  const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [r.cols.map(esc).join(",")].concat(r.rows.map(row => row.map(esc).join(",")));
+  const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `siap-report-${currentReportPeriod}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ---- WP-D: Schedule Report modal + localStorage-persisted list ---- */
+function openScheduleModal() {
+  const modal = document.getElementById("schedule-modal");
+  if (!modal) return;
+  const periodSelect = document.getElementById("schedule-period");
+  if (periodSelect) periodSelect.value = currentReportPeriod;
+  modal.hidden = false;
+}
+function closeScheduleModal() {
+  const modal = document.getElementById("schedule-modal");
+  if (modal) modal.hidden = true;
+}
+function loadReportSchedules() {
+  try { return JSON.parse(localStorage.getItem("siap.reports.schedules") || "[]"); } catch (e) { return []; }
+}
+function saveReportSchedules(list) {
+  localStorage.setItem("siap.reports.schedules", JSON.stringify(list));
+}
+function saveScheduleReport() {
+  const period = document.getElementById("schedule-period")?.value || currentReportPeriod;
+  const time = document.getElementById("schedule-time")?.value || "07:00";
+  const emailsInput = document.getElementById("schedule-emails")?.value.trim();
+  const emails = emailsInput || "ops@mew.gov.kw";
+  const list = loadReportSchedules();
+  list.unshift({ period, time, emails, createdAt: Date.now() });
+  saveReportSchedules(list);
+  renderScheduledReports();
+  closeScheduleModal();
+}
+function renderScheduledReports() {
+  const el = document.getElementById("scheduled-reports-list");
+  if (!el) return;
+  const list = loadReportSchedules();
+  if (!list.length) { el.innerHTML = `<div class="util-text">No scheduled reports yet &mdash; click "Schedule Report" to add one.</div>`; return; }
+  const periodLabel = { shift: "Shift-wise", day: "Day-wise", month: "Month-wise" };
+  el.innerHTML = list.map((s, i) => `
+    <div class="scheduled-row">
+      <div><b style="color:var(--text)">${periodLabel[s.period] || s.period}</b> &middot; daily ${s.time} &middot; ${s.emails}</div>
+      <button class="ack-btn" data-remove-schedule="${i}">Remove</button>
+    </div>`).join("");
+  el.querySelectorAll("[data-remove-schedule]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const list2 = loadReportSchedules();
+      list2.splice(parseInt(btn.dataset.removeSchedule, 10), 1);
+      saveReportSchedules(list2);
+      renderScheduledReports();
+    });
+  });
 }
 
 function renderReportTable() {
@@ -1128,13 +1270,25 @@ function simulateTick() {
   renderGauge();
   drawCameraFrames();
 
-  // occasional WAN link flap / DR sync lag for realism
-  if (Math.random() > 0.93) {
-    state.kpis.wanLinkA = state.kpis.wanLinkA === "up" ? "degraded" : "up";
-  }
-  if (Math.random() > 0.9) {
-    if (state.kpis.drSync === "synced") { state.kpis.drSync = "syncing"; state.kpis.drLagSec = Math.ceil(Math.random() * 4); }
-    else { state.kpis.drSync = "synced"; state.kpis.drLagSec = 0; }
+  // occasional WAN link flap / DR sync lag for realism — suppressed while a demo outage is forced
+  if (!wanForced) {
+    if (Math.random() > 0.93) {
+      state.kpis.wanLinkA = state.kpis.wanLinkA === "up" ? "degraded" : "up";
+    }
+    if (Math.random() > 0.9) {
+      if (state.kpis.drSync === "synced") { state.kpis.drSync = "syncing"; state.kpis.drLagSec = Math.ceil(Math.random() * 4); }
+      else { state.kpis.drSync = "synced"; state.kpis.drLagSec = 0; }
+    }
+  } else {
+    // WP-D: bays keep filling on last-known balance; each tick buffers one more
+    // transaction locally (store-and-forward) until the link is restored.
+    wanBufferedCount++;
+    const row = genLedgerRow();
+    row.status = "Buffered";
+    state.ledger.unshift(row);
+    state.ledger.pop();
+    if (document.getElementById("view-billing").classList.contains("active")) renderLedger();
+    renderAlarmBanner();
   }
   updateArchLiveBadges();
 

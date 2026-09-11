@@ -156,3 +156,48 @@ body.mobile-body {
   body.mobile-body { padding: 0; align-items: stretch; }
   .phone-frame { width: 100%; min-height: 100vh; border-radius: 0; border: none; }
 }
+
+/* ===== WP-D: push banner, orders, fleet, receipt, more-menu ===== */
+.push-banner[hidden] { display: none; }
+.push-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(160deg, rgba(34,211,238,0.18), rgba(59,130,246,0.08));
+  border: 1px solid rgba(34,211,238,0.35); border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 14px; font-size: 11.5px; font-weight: 600; color: var(--text);
+}
+.push-banner i:first-child { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+.push-banner-text { flex: 1; line-height: 1.35; }
+.push-banner-close { background: none; border: none; color: var(--text-dim); cursor: pointer; flex-shrink: 0; padding: 2px; }
+.push-banner-close i { width: 14px; height: 14px; }
+
+.po-row, .fleet-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.po-id, .fleet-title { font-size: 12.5px; font-weight: 700; }
+.po-sub, .fleet-sub { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+
+.po-form { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 6px; }
+.po-kd-row { font-size: 11.5px; color: var(--text-dim); margin-top: 10px; }
+.po-kd-row b { color: var(--accent); }
+
+.timeline-card { margin-top: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.timeline-title { font-size: 11.5px; font-weight: 700; margin-bottom: 10px; }
+.timeline-step { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 11.5px; color: var(--text-faint); }
+.timeline-step i { width: 15px; height: 15px; }
+.timeline-step.active { color: var(--accent); font-weight: 700; }
+.timeline-step.active i { color: var(--green); }
+
+.receipt-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-dim); }
+.receipt-row:last-child { border-bottom: none; }
+.receipt-row b { color: var(--text); font-weight: 700; }
+
+.more-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px 15px; margin-bottom: 8px; color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.more-row i:first-child { width: 17px; height: 17px; color: var(--accent); }
+.more-row .chev { width: 15px; height: 15px; margin-left: auto; color: var(--text-faint); }

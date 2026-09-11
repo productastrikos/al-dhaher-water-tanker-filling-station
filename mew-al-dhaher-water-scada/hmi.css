@@ -1,1 +1,247 @@
-/* hmi.css — placeholder; see docs/IMPLEMENTATION_PLAN.md */
+/* ==========================================================
+   S!aP — WP-C: Tanker Loading HMI (Siemens PCS 7 style faceplate)
+   Scoped entirely under .hmi-root so it never leaks into other views.
+   ========================================================== */
+
+.hmi-root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- top strip ---------- */
+.hmi-topstrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 16px;
+}
+.hmi-topstrip-left, .hmi-topstrip-mid, .hmi-topstrip-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hmi-topstrip-mid { flex: 1; min-width: 220px; }
+.hmi-field-label { font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; }
+.hmi-tag {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  background: var(--accent-dim); border: 1px solid rgba(34,211,238,0.3);
+  border-radius: 6px; padding: 4px 9px;
+}
+.hmi-mode-lamp {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
+  padding: 5px 10px; border-radius: 6px; background: var(--bg-alt); border: 1px solid var(--border);
+}
+.hmi-alarm-line {
+  font-size: 12px; color: var(--text-dim); font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+.hmi-alarm-line.hmi-alarm-active { color: var(--red); font-weight: 700; }
+.hmi-datetime { font-size: 12px; color: var(--text-dim); font-family: 'SFMono-Regular', Menlo, Consolas, monospace; }
+
+.hmi-classic-toggle { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-dim); }
+.hmi-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+.hmi-switch input { opacity: 0; width: 0; height: 0; }
+.hmi-switch-track {
+  position: absolute; inset: 0; background: var(--panel-alt); border: 1px solid var(--border-strong);
+  border-radius: 20px; transition: background 0.2s ease; cursor: pointer;
+}
+.hmi-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text-dim); transition: transform 0.2s ease, background 0.2s ease;
+}
+.hmi-switch input:checked + .hmi-switch-track { background: var(--accent-dim); border-color: var(--accent); }
+.hmi-switch input:checked + .hmi-switch-track .hmi-switch-thumb { transform: translateX(16px); background: var(--accent); }
+
+/* ---------- lamps (shared dot component) ---------- */
+.hmi-lamp-dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  background: #33445c; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
+}
+.hmi-lamp-dot.hmi-lamp-green { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,0.7); }
+.hmi-lamp-dot.hmi-lamp-amber { background: var(--amber); box-shadow: 0 0 6px rgba(251,191,36,0.7); }
+.hmi-lamp-dot.hmi-lamp-red { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,0.8); }
+.hmi-lamp-dot.hmi-lamp-off { background: #33445c; box-shadow: none; }
+
+/* ---------- body grid ---------- */
+.hmi-body {
+  display: grid;
+  grid-template-columns: 300px 1fr 190px;
+  gap: 14px;
+  align-items: stretch;
+}
+@media (max-width: 1200px) {
+  .hmi-body { grid-template-columns: 1fr; }
+}
+
+.hmi-col-left, .hmi-col-mid, .hmi-col-right {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.hmi-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+}
+.hmi-panel-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 9px; display: flex; justify-content: space-between; align-items: baseline;
+}
+.hmi-panel-title .hint { font-size: 10px; text-transform: none; font-weight: 500; color: var(--text-faint); }
+
+/* ---------- batch table ---------- */
+.hmi-table-wrap { overflow-x: auto; }
+.hmi-batch-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.hmi-batch-table th, .hmi-batch-table td {
+  padding: 5px 7px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.hmi-batch-table th { color: var(--text-faint); font-weight: 700; text-transform: uppercase; font-size: 9.5px; text-align: right; }
+.hmi-batch-table th:first-child, .hmi-batch-table td:first-child { text-align: left; }
+.hmi-row-label { color: var(--text-dim); font-weight: 600; }
+.hmi-batch-table td { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; color: var(--text); }
+.hmi-cell-ok { color: var(--green); }
+
+.hmi-status-chip { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em; }
+.hmi-status-run { background: var(--accent-dim); color: var(--accent); }
+.hmi-status-ok { background: var(--green-dim); color: var(--green); }
+.hmi-status-idle { background: rgba(148,178,216,0.12); color: var(--text-dim); }
+.hmi-status-fault { background: var(--red-dim); color: var(--red); }
+
+/* ---------- totaliser ---------- */
+.hmi-totaliser-panel { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.hmi-totaliser-block { flex: 1; min-width: 140px; }
+.hmi-totaliser-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-faint); text-transform: uppercase; margin-bottom: 4px; }
+.hmi-totaliser-digits {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 30px; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--accent); background: var(--bg-alt);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 8px 10px; text-align: right;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
+  text-shadow: 0 0 8px rgba(34,211,238,0.55);
+}
+.hmi-totaliser-digits-sm { font-size: 20px; color: #7dd3fc; text-shadow: 0 0 6px rgba(125,211,252,0.45); }
+
+/* ---------- mimic ---------- */
+.hmi-mimic-panel { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 380px; }
+.hmi-svg { width: 100%; height: auto; }
+
+/* ---------- controls ---------- */
+.hmi-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hmi-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 6px; border-radius: 7px; border: 1px solid var(--border-strong);
+  background: var(--panel-alt); color: var(--text);
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em; cursor: pointer;
+}
+.hmi-btn:hover { background: rgba(255,255,255,0.05); }
+.hmi-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.hmi-btn-active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.hmi-btn-green { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.hmi-btn-green:hover { background: rgba(52,211,153,0.22); }
+.hmi-btn-red { background: var(--red-dim); border-color: var(--red); color: var(--red); grid-column: span 1; }
+.hmi-btn-red:hover { background: rgba(248,113,113,0.22); }
+#hmi-btn-reset { grid-column: span 2; }
+
+/* ---------- interlock lamps panel ---------- */
+.hmi-lamp-row {
+  display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-dim);
+  padding: 6px 2px; border-bottom: 1px solid var(--border);
+}
+.hmi-lamp-row:last-child { border-bottom: none; }
+
+/* ---------- trend ---------- */
+.hmi-trend-panel { padding-bottom: 10px; }
+.hmi-trend-wrap { height: 90px; }
+
+.hmi-util-text { padding: 2px 2px 0; }
+
+/* ==========================================================
+   PCS 7 "classic" theme — light grey plant-HMI look, scoped to
+   .hmi-root.hmi-classic so the rest of S!aP stays dark by default.
+   ========================================================== */
+.hmi-root.hmi-classic {
+  /* Re-declare the CORE theme tokens (styles.css :root) scoped to this subtree only.
+     .scada-svg / .box / .box-chip / .pipe-flow / .pipe-idle / .valve-* all read these
+     same custom properties, so the truck mimic, pipes and ISA valve symbols re-skin
+     automatically along with the HMI chrome below — no duplicate SVG classes needed. */
+  --bg: #b9c1cc;
+  --bg-alt: #aab3c0;
+  --panel: #d9dde3;
+  --panel-alt: #c7ccd4;
+  --border: #99a2b0;
+  --border-strong: #7d8798;
+  --text: #1c2430;
+  --text-dim: #46505f;
+  --text-faint: #626d7d;
+  --accent: #0a6fb0;
+  --accent-dim: rgba(10, 111, 176, 0.16);
+  --green: #00a651;
+  --green-dim: rgba(0, 166, 81, 0.18);
+  --amber: #e2a300;
+  --amber-dim: rgba(226, 163, 0, 0.18);
+  --red: #cc2b2b;
+  --red-dim: rgba(204, 43, 43, 0.18);
+
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  color: var(--text);
+}
+.hmi-root.hmi-classic .hmi-topstrip,
+.hmi-root.hmi-classic .hmi-panel {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+.hmi-root.hmi-classic .hmi-panel-title,
+.hmi-root.hmi-classic .hmi-field-label,
+.hmi-root.hmi-classic .hmi-row-label,
+.hmi-root.hmi-classic .hmi-alarm-line,
+.hmi-root.hmi-classic .hmi-datetime,
+.hmi-root.hmi-classic .hmi-classic-toggle,
+.hmi-root.hmi-classic .hmi-lamp-row,
+.hmi-root.hmi-classic .hmi-totaliser-label,
+.hmi-root.hmi-classic .hmi-batch-table th {
+  color: var(--text-dim);
+}
+.hmi-root.hmi-classic .hmi-alarm-line.hmi-alarm-active { color: var(--red); }
+.hmi-root.hmi-classic .hmi-batch-table td { color: var(--text); }
+.hmi-root.hmi-classic .hmi-batch-table th, .hmi-root.hmi-classic .hmi-batch-table td { border-color: var(--border); }
+.hmi-root.hmi-classic .hmi-tag {
+  background: #cfe6f6; border-color: #8fb9d6; color: var(--accent);
+}
+.hmi-root.hmi-classic .hmi-mode-lamp { background: var(--panel-alt); border-color: var(--border); color: var(--text); }
+.hmi-root.hmi-classic .hmi-totaliser-digits {
+  background: #0d1a12; color: #37ff8f; border-color: #000; text-shadow: 0 0 8px rgba(55,255,143,0.6);
+}
+.hmi-root.hmi-classic .hmi-totaliser-digits-sm { color: #9dffcb; }
+.hmi-root.hmi-classic .hmi-btn {
+  background: linear-gradient(180deg, #eef1f4, #c3c9d1);
+  border: 1px solid #7d8798; color: var(--text);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 2px rgba(0,0,0,0.25);
+}
+.hmi-root.hmi-classic .hmi-btn:hover { filter: brightness(1.03); }
+.hmi-root.hmi-classic .hmi-btn-active { background: linear-gradient(180deg, #bfe4ff, #8fc7ee); border-color: var(--accent); color: #073a57; }
+.hmi-root.hmi-classic .hmi-btn-green { background: linear-gradient(180deg, #7be3ab, var(--green)); border-color: #04703a; color: #04241a; }
+.hmi-root.hmi-classic .hmi-btn-red { background: linear-gradient(180deg, #f19a9a, var(--red)); border-color: #7a1414; color: #2a0808; }
+.hmi-root.hmi-classic .hmi-lamp-dot.hmi-lamp-green { background: var(--green); box-shadow: 0 0 5px rgba(0,166,81,0.7); }
+.hmi-root.hmi-classic .hmi-lamp-dot.hmi-lamp-amber { background: var(--amber); box-shadow: 0 0 5px rgba(226,163,0,0.7); }
+.hmi-root.hmi-classic .hmi-lamp-dot.hmi-lamp-red { background: var(--red); box-shadow: 0 0 5px rgba(204,43,43,0.8); }
+.hmi-root.hmi-classic .hmi-lamp-dot.hmi-lamp-off { background: #97a0ac; }
+.hmi-root.hmi-classic .hmi-status-ok { background: rgba(0,166,81,0.18); color: #04703a; }
+.hmi-root.hmi-classic .hmi-status-run { background: rgba(10,111,176,0.18); color: var(--accent); }
+.hmi-root.hmi-classic .hmi-status-idle { background: rgba(70,80,95,0.12); color: var(--text-dim); }
+.hmi-root.hmi-classic .hmi-status-fault { background: rgba(204,43,43,0.18); color: var(--red); }
+.hmi-root.hmi-classic .hmi-mimic-panel { background: #c3c9d1; border-color: var(--border); }
+.hmi-root.hmi-classic .hmi-util-text { color: var(--text-dim); }
+.hmi-root.hmi-classic .scada-svg text { fill: var(--text-dim); }
+.hmi-root.hmi-classic .scada-svg text.title { fill: var(--text); }
