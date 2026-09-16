@@ -32,7 +32,7 @@
 .hmi-tag {
   font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
   font-size: 12px; font-weight: 700; color: var(--accent);
-  background: var(--accent-dim); border: 1px solid rgba(34,211,238,0.3);
+  background: var(--accent-dim); border: 1px solid rgba(var(--accent-rgb),0.3);
   border-radius: 6px; padding: 4px 9px;
 }
 .hmi-mode-lamp {
@@ -65,15 +65,15 @@
   display: inline-block; width: 10px; height: 10px; border-radius: 50%;
   background: #33445c; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
 }
-.hmi-lamp-dot.hmi-lamp-green { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,0.7); }
-.hmi-lamp-dot.hmi-lamp-amber { background: var(--amber); box-shadow: 0 0 6px rgba(251,191,36,0.7); }
-.hmi-lamp-dot.hmi-lamp-red { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,0.8); }
+.hmi-lamp-dot.hmi-lamp-green { background: var(--green); box-shadow: 0 0 6px rgba(var(--green-rgb),0.7); }
+.hmi-lamp-dot.hmi-lamp-amber { background: var(--amber); box-shadow: 0 0 6px rgba(var(--amber-rgb),0.7); }
+.hmi-lamp-dot.hmi-lamp-red { background: var(--red); box-shadow: 0 0 6px rgba(var(--red-rgb),0.8); }
 .hmi-lamp-dot.hmi-lamp-off { background: #33445c; box-shadow: none; }
 
 /* ---------- body grid ---------- */
 .hmi-body {
   display: grid;
-  grid-template-columns: 300px 1fr 190px;
+  grid-template-columns: 330px 1fr 200px;
   gap: 14px;
   align-items: stretch;
 }
@@ -126,13 +126,14 @@
   border: 1px solid var(--border-strong); border-radius: 8px;
   padding: 8px 10px; text-align: right;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
-  text-shadow: 0 0 8px rgba(34,211,238,0.55);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb),0.55);
 }
 .hmi-totaliser-digits-sm { font-size: 20px; color: #7dd3fc; text-shadow: 0 0 6px rgba(125,211,252,0.45); }
 
 /* ---------- mimic ---------- */
-.hmi-mimic-panel { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 380px; }
-.hmi-svg { width: 100%; height: auto; }
+.hmi-mimic-panel { flex: 1; display: flex; align-items: stretch; justify-content: stretch; min-height: 460px; }
+#hmi-mimic-svg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.hmi-svg { width: 100%; height: 100%; max-height: 520px; }
 
 /* ---------- controls ---------- */
 .hmi-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -142,13 +143,13 @@
   background: var(--panel-alt); color: var(--text);
   font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em; cursor: pointer;
 }
-.hmi-btn:hover { background: rgba(255,255,255,0.05); }
+.hmi-btn:hover { background: var(--hover-tint); }
 .hmi-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 .hmi-btn-active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 .hmi-btn-green { background: var(--green-dim); border-color: var(--green); color: var(--green); }
-.hmi-btn-green:hover { background: rgba(52,211,153,0.22); }
+.hmi-btn-green:hover { background: rgba(var(--green-rgb),0.22); }
 .hmi-btn-red { background: var(--red-dim); border-color: var(--red); color: var(--red); grid-column: span 1; }
-.hmi-btn-red:hover { background: rgba(248,113,113,0.22); }
+.hmi-btn-red:hover { background: rgba(var(--red-rgb),0.22); }
 #hmi-btn-reset { grid-column: span 2; }
 
 /* ---------- interlock lamps panel ---------- */
@@ -160,7 +161,12 @@
 
 /* ---------- trend ---------- */
 .hmi-trend-panel { padding-bottom: 10px; }
-.hmi-trend-wrap { height: 90px; }
+.hmi-trend-wrap { height: 90px; position: relative; }
+.hmi-trend-idle {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-faint); letter-spacing: 0.02em; pointer-events: none;
+}
+.hmi-trend-idle[hidden] { display: none; }
 
 .hmi-util-text { padding: 2px 2px 0; }
 

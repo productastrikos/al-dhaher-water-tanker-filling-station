@@ -1,34 +1,25 @@
-/* twin3d.js — WP-A: 3D Digital Twin entry point (ES module).
- * Registers the "3D Digital Twin" view via SIAP.registerView and owns everything under
- * twin3d/*.js. Falls back to a 2.5D render tab if WebGL is unavailable or the renderer throws.
- * See docs/IMPLEMENTATION_PLAN.md section "WP-A" for the full spec this file implements. */
+/* twin3d.js — 3D Digital Twin entry point (ES module). Builds the scene from twin3d/layout.js
+ * (real .glb assets + black asphalt roads/footings), drives trucks.js's arrival/departure
+ * animation from live bay status, and shows always-on colour-coded status dots (twin3d/labels.js).
+ *
+ * The click-drag-scale scene EDITOR (twin3d/editor.js) was removed in an earlier pass and has
+ * been brought back per client request -- "Edit objects" toggles a panel + TransformControls
+ * gizmo for repositioning the static yard dressing; edits autosave to localStorage and are
+ * re-applied on every load via `applyOverrides()`, even with the panel closed.
+ *
+ * Click-to-info: clicking a truck or a bay apron in the 3D view (when the editor is OFF) raycasts
+ * against the trucks group and the station group, and opens a FIXED, screen-anchored side panel
+ * with that bay's live numbers (same fields as the Bay Control transaction card). This replaces
+ * the previous floating CSS2D text chips, which visibly drifted across the screen as the camera
+ * orbited -- the exact "trucks with a moving panel" complaint this rebuild addresses. */
 import * as THREE from "three";
-import { createScene } from "./twin3d/scene.js";
-import {
-  buildStation, refreshBayStatusDots, bayLayout, manifoldX, STATUS_COLOR,
-  MANIFOLDS, BAY_COUNT, GATE_ENTRY, GATE_EXIT,
-} from "./twin3d/station.js";
-import { initTrucks, updateTrucks, getTruckObject } from "./twin3d/trucks.js";
-import { buildBayRig } from "./twin3d/bay.js";
-import { overviewShot, manifoldShot, bayShot, createCameraTween } from "./twin3d/camera.js";
-import { createPicker } from "./twin3d/picking.js";
+import { createScene } from "./twin3d/scene.js?v=1";
+import { buildStation, refreshBayStatusDots, updatePipeFlow } from "./twin3d/layout.js?v=12";
+import { initTrucks, updateTrucks, getTruckObject } from "./twin3d/trucks.js?v=5";
+import { createLabelLayer, legendHtml } from "./twin3d/labels.js?v=2";
+import { createEditor, editorPanelHtml, applyOverrides } from "./twin3d/editor.js?v=1";
 
 const VIEW_ID = "twin3d";
-
-const HOTSPOTS = [
-  { label: "Control Center", x: 46, y: 10 },
-  { label: "Flow Computer", x: 66, y: 21 },
-  { label: "Level Transmitter", x: 35, y: 31 },
-  { label: "Pressure Transmitter", x: 45, y: 61 },
-  { label: "Custody Flowmeter", x: 61, y: 62 },
-  { label: "Temperature Transmitter", x: 68, y: 62 },
-  { label: "Outlet Valve", x: 79, y: 62 },
-  { label: "Container / Tanker", x: 93, y: 55 },
-  { label: "Tanker Truck", x: 6, y: 55 },
-  { label: "Inlet Valve", x: 17, y: 62 },
-];
-
-function pad2(n) { return n.toString().padStart(2, "0"); }
 
 function detectWebGL() {
   try {
@@ -40,71 +31,107 @@ function detectWebGL() {
 function viewHtml() {
   return `
   <div class="t3-wrap">
-    <div class="card t3-toolbar-card">
-      <div class="t3-tabrow">
-        <div class="t3-tabs" id="t3-tabs">
-          <button class="btn btn-sm t3-tab active" data-tab="3d"><i data-lucide="box"></i> 3D</button>
-          <button class="btn btn-sm t3-tab" data-tab="pid"><i data-lucide="workflow"></i> P&amp;ID</button>
-          <button class="btn btn-sm t3-tab" data-tab="render"><i data-lucide="image"></i> Render</button>
+    <div class="card t3-stage-card" style="padding:0; overflow:hidden;">
+      <div class="t3-canvas-wrap" id="t3-canvas-wrap">
+        <canvas id="t3-canvas"></canvas>
+        <div class="t3-status-chip" id="t3-status-chip">
+          <span id="t3-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+          <strong>Astriverse</strong> station &amp; bay &middot; live from S!aP Connect
+          <span class="t3-click-hint">&middot; click a truck or bay for live info</span>
         </div>
-        <div class="util-text" id="t3-status-text">Astriverse &middot; station &amp; bay &middot; live from S!aP Connect</div>
-      </div>
-      <div class="t3-toolbar" id="t3-toolbar">
-        <button class="btn btn-sm t3-preset active" data-preset="overview"><i data-lucide="maximize"></i> Overview</button>
-        <button class="btn btn-sm t3-preset" data-preset="manifold"><i data-lucide="git-branch"></i> Manifold</button>
-        <button class="btn btn-sm t3-preset" data-preset="bay"><i data-lucide="crosshair"></i> Bay</button>
-        <button class="btn btn-sm t3-preset" data-preset="follow"><i data-lucide="truck"></i> Follow truck</button>
-        <span class="t3-sep"></span>
-        <button class="btn btn-sm" id="t3-tour"><i data-lucide="repeat"></i> Auto-tour</button>
-        <button class="btn btn-sm active" id="t3-flow-toggle"><i data-lucide="waves"></i> Flow lines</button>
-        <button class="btn btn-sm active" id="t3-labels-toggle"><i data-lucide="tag"></i> Labels</button>
-      </div>
-    </div>
+        <button class="btn btn-sm t3-labels-btn active" id="t3-labels-toggle"><i data-lucide="circle-dot"></i> Status dots</button>
+        <button class="btn btn-sm t3-editor-btn" id="t3-editor-toggle"><i data-lucide="move-3d"></i> Edit objects</button>
+        ${legendHtml()}
+        <div class="t3-fallback-note util-text" id="t3-fallback-note" hidden>
+          <i data-lucide="alert-triangle" style="width:12px;height:12px;display:inline;"></i>
+          WebGL unavailable on this device.
+        </div>
+        <div class="t3-camnav" id="t3-camnav" title="Move the camera">
+          <div></div><button data-cam="up" title="Move forward"><i data-lucide="chevron-up"></i></button><div></div>
+          <button data-cam="left" title="Move left"><i data-lucide="chevron-left"></i></button>
+          <button class="t3-cam-center" data-cam="home" title="Reset view"><i data-lucide="home"></i></button>
+          <button data-cam="right" title="Move right"><i data-lucide="chevron-right"></i></button>
+          <div></div><button data-cam="down" title="Move back"><i data-lucide="chevron-down"></i></button><div></div>
+        </div>
+        <div class="t3-camzoom" id="t3-camzoom" title="Zoom the camera">
+          <button data-cam="zoom-in" title="Zoom in"><i data-lucide="plus"></i></button>
+          <button data-cam="zoom-out" title="Zoom out"><i data-lucide="minus"></i></button>
+        </div>
 
-    <div class="grid-2 t3-body">
-      <div class="card t3-stage-card">
-        <div class="t3-canvas-wrap" id="t3-canvas-wrap">
-          <canvas id="t3-canvas"></canvas>
-          <div id="t3-labels" class="t3-labels-layer"></div>
-          <div id="t3-pid-layer" class="t3-layer" hidden><div id="t3-pid-diagram" class="t3-pid-diagram"></div></div>
-          <div id="t3-render-layer" class="t3-layer" hidden>
-            <img src="assets/images/twin/bay-aerial.jpg" alt="Bay aerial render" id="t3-render-img"/>
-            <div class="t3-hotspots" id="t3-hotspots"></div>
+        <div class="t3-info-panel" id="t3-info-panel" hidden>
+          <div class="t3-info-head">
+            <div>
+              <div class="t3-info-title" id="t3-info-title">Bay 14</div>
+              <div class="t3-info-sub" id="t3-info-sub">Al-Salem Transport Co.</div>
+            </div>
+            <button class="btn btn-sm" id="t3-info-close" title="Close (Esc)" aria-label="Close"><i data-lucide="x"></i></button>
           </div>
-          <div class="t3-fallback-note util-text" id="t3-fallback-note" hidden>
-            <i data-lucide="alert-triangle" style="width:12px;height:12px;display:inline;"></i>
-            WebGL unavailable on this device &mdash; showing the 2.5D render instead.
+          <div class="t3-info-body">
+            <div class="metric-line"><span class="k">Status</span><span class="v" id="t3-info-status">Idle</span></div>
+            <div class="metric-line"><span class="k">Account #</span><span class="v mono" id="t3-info-account">&mdash;</span></div>
+            <div class="metric-line"><span class="k">License plate</span><span class="v mono" id="t3-info-plate">&mdash;</span></div>
+            <div class="metric-line"><span class="k">Dispensed / Target</span><span class="v" id="t3-info-volume">&mdash;</span></div>
+            <div class="metric-line"><span class="k">Instantaneous flow</span><span class="v" id="t3-info-flow">&mdash;</span></div>
+            <div class="metric-line"><span class="k">ETA to full</span><span class="v" id="t3-info-eta">&mdash;</span></div>
           </div>
-          <div class="t3-legend" id="t3-legend"></div>
-          <div class="t3-hover" id="t3-hover" hidden></div>
+          <button class="btn btn-sm btn-primary" id="t3-info-baycontrol" style="width:100%; justify-content:center; margin-top:12px;">
+            <i data-lucide="gauge"></i> Open in Bay Control
+          </button>
         </div>
-      </div>
-      <div class="card" id="t3-bay-card">
-        <div class="card-title">Bay <span id="t3-bay-id">14</span> &middot; live <span class="hint" id="t3-bay-hint"></span></div>
-        <div id="t3-bay-metrics"></div>
+
+        ${editorPanelHtml()}
       </div>
     </div>
   </div>`;
 }
 
-/* ---------------- module state (must exist before SIAP.registerView, since it mounts
-   synchronously when the document is already ready by the time this module executes) ---------------- */
 let els = {};
-let three = null; // { scene renderer camera controls ... } from createScene()
-let cameraTween = null;
-let picker = null;
-let stationHandle = null; // { group, pickables, barriers }
-let bayRig = null;
+let three = null;
+let stationHandle = null;
+let labelLayer = null;
 let webglOk = false;
-let currentTab = "3d";
-let currentPreset = "overview";
-let followBayId = null;
-let autoTourOn = false;
-let autoTourTimer = null;
-let bayCardTimer = null;
-let labelsOn = true;
-let flowLinesOn = true;
-let selectedBayId = SIAP.selectedBayId || 14;
+let editor = null;
+let selectionBox = null;
+let raycaster = null;
+let pointerNdc = null;
+let selectedBayId = null;
+
+const DEFAULT_CAM_POS = new THREE.Vector3(150, 115, 175);
+const DEFAULT_CAM_TARGET = new THREE.Vector3(10, 3, 0);
+
+/** On-screen camera D-pad: pans the camera+target together along the camera's current
+ *  ground-projected forward/right vectors (so "left/right/forward/back" stay intuitive at any
+ *  orbit angle), plus a dolly zoom and a one-click reset back to the default overview. */
+function nudgeCamera(dir) {
+  if (!three) return;
+  const cam = three.camera, ctr = three.controls;
+  if (dir === "home") {
+    cam.position.copy(DEFAULT_CAM_POS);
+    ctr.target.copy(DEFAULT_CAM_TARGET);
+    return;
+  }
+  if (dir === "zoom-in" || dir === "zoom-out") {
+    const offset = new THREE.Vector3().subVectors(cam.position, ctr.target);
+    const dist = offset.length();
+    const next = THREE.MathUtils.clamp(dist * (dir === "zoom-in" ? 0.8 : 1.25), ctr.minDistance, ctr.maxDistance);
+    offset.setLength(next);
+    cam.position.copy(ctr.target).clone().add(offset);
+    return;
+  }
+  const forward = new THREE.Vector3();
+  cam.getWorldDirection(forward);
+  forward.y = 0;
+  if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1); else forward.normalize();
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+  const step = Math.max(5, cam.position.distanceTo(ctr.target) * 0.18);
+  const move = new THREE.Vector3();
+  if (dir === "up") move.copy(forward).multiplyScalar(step);
+  else if (dir === "down") move.copy(forward).multiplyScalar(-step);
+  else if (dir === "left") move.copy(right).multiplyScalar(-step);
+  else if (dir === "right") move.copy(right).multiplyScalar(step);
+  cam.position.add(move);
+  ctr.target.add(move);
+}
 
 SIAP.registerView({
   id: VIEW_ID,
@@ -125,78 +152,127 @@ function mountTwin(section) {
     section,
     canvas: section.querySelector("#t3-canvas"),
     canvasWrap: section.querySelector("#t3-canvas-wrap"),
-    labelsEl: section.querySelector("#t3-labels"),
-    pidLayer: section.querySelector("#t3-pid-layer"),
-    pidDiagram: section.querySelector("#t3-pid-diagram"),
-    renderLayer: section.querySelector("#t3-render-layer"),
-    hotspots: section.querySelector("#t3-hotspots"),
     fallbackNote: section.querySelector("#t3-fallback-note"),
-    legend: section.querySelector("#t3-legend"),
-    hover: section.querySelector("#t3-hover"),
-    bayId: section.querySelector("#t3-bay-id"),
-    bayHint: section.querySelector("#t3-bay-hint"),
-    bayMetrics: section.querySelector("#t3-bay-metrics"),
-    tabs: section.querySelector("#t3-tabs"),
-    toolbar: section.querySelector("#t3-toolbar"),
-    tour: section.querySelector("#t3-tour"),
-    flowToggle: section.querySelector("#t3-flow-toggle"),
     labelsToggle: section.querySelector("#t3-labels-toggle"),
-    statusText: section.querySelector("#t3-status-text"),
+    editorToggle: section.querySelector("#t3-editor-toggle"),
+    camnav: section.querySelector("#t3-camnav"),
+    camzoom: section.querySelector("#t3-camzoom"),
+    infoPanel: section.querySelector("#t3-info-panel"),
+    infoClose: section.querySelector("#t3-info-close"),
+    infoTitle: section.querySelector("#t3-info-title"),
+    infoSub: section.querySelector("#t3-info-sub"),
+    infoStatus: section.querySelector("#t3-info-status"),
+    infoAccount: section.querySelector("#t3-info-account"),
+    infoPlate: section.querySelector("#t3-info-plate"),
+    infoVolume: section.querySelector("#t3-info-volume"),
+    infoFlow: section.querySelector("#t3-info-flow"),
+    infoEta: section.querySelector("#t3-info-eta"),
+    infoBayControlBtn: section.querySelector("#t3-info-baycontrol"),
   };
-
-  buildLegend();
-  buildHotspots();
-  wireTabs();
-  wireToolbar();
-  wireKeyboard();
-
-  // Don't rely solely on the `hidden` attribute + `[hidden]` CSS: a stale cache of twin3d.css
-  // (it's @imported by modules.css with no cache-busting query we're allowed to add) could still
-  // apply the note's own `display: flex` and leave it visible by default. Force it off explicitly.
   els.fallbackNote.style.display = "none";
+
+  els.infoClose.addEventListener("click", () => selectBay(null));
+  els.infoBayControlBtn.addEventListener("click", () => {
+    if (selectedBayId == null) return;
+    SIAP.selectBay(selectedBayId);
+    SIAP.showView("baycontrol");
+  });
 
   webglOk = detectWebGL();
   if (!webglOk) {
-    activateFallback("WebGL is not available in this browser/GPU.");
-  } else {
-    initThree().catch((e) => {
-      console.error("[twin3d] init failed, falling back to 2.5D render", e);
-      activateFallback("The 3D renderer failed to start.");
-    });
+    els.fallbackNote.hidden = false;
+    els.fallbackNote.style.display = "flex";
+    console.warn("[twin3d] WebGL is not available in this browser/GPU.");
+    return;
   }
-
-  SIAP.on("bay:select", (bay) => { if (bay) onBaySelected(bay.id); });
-  SIAP.on("fill:start", () => { /* truck spawn handled by the per-frame state read */ });
-  SIAP.on("fill:stop", () => { /* truck departure handled by the per-frame state read */ });
+  initThree().catch((e) => console.error("[twin3d] init failed", e));
 
   window.__twin3d = {
     get running() { return three ? three.running : false; },
     get webglOk() { return webglOk; },
-    selectBay: (id) => SIAP.selectBay(id),
+    get scene() { return three ? three.scene : null; },
+    get camera() { return three ? three.camera : null; },
+    get controls() { return three ? three.controls : null; },
+    get renderer() { return three ? three.renderer : null; },
+    get editor() { return editor; },
     screenshot: () => (three ? three.renderer.domElement.toDataURL("image/png") : null),
+    /** Debug helper: find a placed object by its `userData.placementId` or `.name` and report its
+     *  world position + bounding box, for tuning `twin3d/layout.js` PLACEMENTS/footings numbers
+     *  without guessing blind. Not used by the running app itself. */
+    describe(idOrName) {
+      if (!three) return null;
+      let found = null;
+      three.scene.traverse((o) => { if (o.userData?.placementId === idOrName || o.name === idOrName) found = o; });
+      if (!found) return null;
+      found.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(found);
+      return {
+        position: found.position.toArray(),
+        min: box.min.toArray(), max: box.max.toArray(),
+        size: box.getSize(new THREE.Vector3()).toArray(),
+      };
+    },
   };
 }
 
 async function initThree() {
-  three = createScene(els.canvas, els.labelsEl);
-  cameraTween = createCameraTween(three.camera, three.controls);
-
-  three.controls.addEventListener("start", () => { followBayId = null; });
+  three = createScene(els.canvas);
 
   stationHandle = await buildStation(three.scene);
+  applyOverrides(stationHandle.editables); // re-apply any layout tweaks saved via the editor
   await initTrucks(three.scene);
-  bayRig = await buildBayRig(three.scene);
-  bayRig.moveTo(selectedBayId);
 
-  picker = createPicker(three.renderer, three.camera, () => stationHandle.pickables);
-  picker.onHover((hit) => showHoverCard(hit));
-  picker.onClick((hit) => {
-    if (!hit) return;
-    SIAP.selectBay(hit.bayId);
-    flyToPreset("bay");
+  editor = createEditor({
+    scene: three.scene,
+    camera: three.camera,
+    renderer: three.renderer,
+    controls: three.controls,
+    section: els.section,
+    baseItems: stationHandle.editables,
+  });
+  els.editorToggle.addEventListener("click", () => {
+    editor.setEnabled(!editor.enabled);
+    els.editorToggle.classList.toggle("active", editor.enabled);
+    if (editor.enabled) selectBay(null); // don't show both the bay-info panel and the editor gizmo
   });
 
-  three.onTick((dt) => frameUpdate(dt));
+  labelLayer = createLabelLayer();
+  three.scene.add(labelLayer.group);
+  els.labelsToggle.addEventListener("click", () => {
+    labelLayer.setEnabled(!labelLayer.enabled);
+    els.labelsToggle.classList.toggle("active", labelLayer.enabled);
+  });
+
+  selectionBox = new THREE.BoxHelper(undefined, 0x22d3ee);
+  selectionBox.visible = false;
+  selectionBox.material.depthTest = false;
+  selectionBox.material.transparent = true;
+  selectionBox.renderOrder = 999;
+  three.scene.add(selectionBox);
+
+  raycaster = new THREE.Raycaster();
+  pointerNdc = new THREE.Vector2();
+  els.canvas.addEventListener("click", onCanvasClick);
+  document.addEventListener("keydown", onGlobalKeydown);
+
+  els.camnav.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-cam]");
+    if (btn) nudgeCamera(btn.dataset.cam);
+  });
+  els.camzoom.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-cam]");
+    if (btn) nudgeCamera(btn.dataset.cam);
+  });
+
+  three.onTick((dt) => {
+    const state = SIAP.state;
+    updateTrucks(state.bays, dt);
+    refreshBayStatusDots(stationHandle.group, state.bays);
+    updatePipeFlow(dt);
+    labelLayer.update(state.bays);
+    updateSelection();
+    editor.update();
+  });
 
   const ro = new ResizeObserver(() => {
     const r = els.canvasWrap.getBoundingClientRect();
@@ -205,237 +281,120 @@ async function initThree() {
   ro.observe(els.canvasWrap);
   three._resizeObserver = ro;
 
-  // initial sizing before first paint
   const r0 = els.canvasWrap.getBoundingClientRect();
   three.resize(r0.width || 800, r0.height || 560);
 
-  applyPreset("overview", true);
-  refreshBayCard();
+  three.camera.position.copy(DEFAULT_CAM_POS);
+  three.controls.target.copy(DEFAULT_CAM_TARGET);
+
   if (window.lucide) lucide.createIcons();
 }
 
-function activateFallback(reason) {
-  console.warn("[twin3d] fallback engaged:", reason);
-  els.fallbackNote.hidden = false;
-  els.fallbackNote.style.display = "flex"; // belt-and-braces: don't rely solely on `[hidden]` CSS
-  els.tabs.querySelectorAll('[data-tab="3d"], [data-tab="pid"]').forEach((b) => (b.disabled = true));
-  setTab("render");
+/** Raycasts the click against the trucks group + the station group (bay aprons carry
+ *  `userData.bayId`, set in layout.js; arrived/parked trucks carry it too, set in trucks.js).
+ *  Walks each hit up its parent chain looking for that tag, skipping any hit that sits under an
+ *  invisible ancestor (the truck pool keeps ~46 objects alive but hidden at the origin when not
+ *  in use, so a naive "closest hit wins" could pick an invisible pooled truck over a real one). */
+function onCanvasClick(e) {
+  if (!three || !raycaster) return;
+  if (editor && editor.enabled) return; // the scene editor owns clicks on the canvas while it's open
+  const rect = els.canvas.getBoundingClientRect();
+  pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointerNdc, three.camera);
+
+  const targets = [];
+  const trucksGroup = three.scene.getObjectByName("trucks");
+  if (trucksGroup) targets.push(trucksGroup);
+  if (stationHandle && stationHandle.group) targets.push(stationHandle.group);
+  if (!targets.length) return;
+
+  const hits = raycaster.intersectObjects(targets, true);
+  for (const hit of hits) {
+    let cursor = hit.object;
+    let visible = true;
+    while (cursor) { if (cursor.visible === false) { visible = false; break; } cursor = cursor.parent; }
+    if (!visible) continue;
+    let o = hit.object;
+    while (o && o.userData.bayId == null) o = o.parent;
+    if (o && o.userData.bayId != null) { selectBay(o.userData.bayId); return; }
+  }
 }
 
-/* ---------------- lifecycle ---------------- */
-function showTwin() {
-  selectedBayId = SIAP.selectedBayId || selectedBayId;
-  if (three && webglOk && currentTab === "3d") {
-    three.start();
+function onGlobalKeydown(e) {
+  if (e.key === "Escape" && selectedBayId != null) selectBay(null);
+}
+
+function selectBay(id) {
+  selectedBayId = id;
+  if (id == null) {
+    if (els.infoPanel) els.infoPanel.hidden = true;
+    if (selectionBox) selectionBox.visible = false;
+    return;
   }
-  refreshBayCard();
-  if (currentTab === "pid") refreshPid();
-  bayCardTimer = window.setInterval(refreshBayCard, 250);
+  els.infoPanel.hidden = false;
+  renderInfoPanel();
+  syncSelectionBox();
+  if (window.lucide) lucide.createIcons();
+}
+
+const STATUS_TEXT_COLOR = {
+  idle: "var(--text-faint)", filling: "var(--accent)", done: "var(--green)",
+  fault: "var(--red)", offline: "var(--text-faint)",
+};
+
+function renderInfoPanel() {
+  if (selectedBayId == null || !els.infoPanel) return;
+  const bay = SIAP.state.bays.find((b) => b.id === selectedBayId);
+  if (!bay) { selectBay(null); return; }
+
+  els.infoTitle.textContent = `Bay ${SIAP.pad(bay.id)}`;
+  els.infoSub.textContent = bay.owner || "—";
+  els.infoStatus.textContent = SIAP.statusLabel(bay.status);
+  els.infoStatus.style.color = STATUS_TEXT_COLOR[bay.status] || "var(--text)";
+  els.infoAccount.textContent = bay.account || "—";
+  els.infoPlate.textContent = bay.plate || "—";
+  els.infoVolume.textContent = `${Math.round(bay.dispensed).toLocaleString()} / ${Math.round(bay.target).toLocaleString()} IG`;
+  els.infoFlow.textContent = `${(bay.flow ?? 0).toFixed(1)} m³/h`;
+
+  if (bay.status === "filling" && bay.flow > 0) {
+    // dispensed/target are Imp.gal, flow is m³/h (1 Imp.gal = 0.004546 m³) -- same conversion
+    // Bay Control uses (app.js), so the two screens always agree.
+    const remaining = Math.max(0, bay.target - bay.dispensed);
+    const etaMin = (remaining * 0.004546) / bay.flow;
+    els.infoEta.textContent = `${Math.floor(etaMin)}m ${Math.floor((etaMin % 1) * 60)}s`;
+  } else {
+    els.infoEta.textContent = "—";
+  }
+}
+
+function syncSelectionBox() {
+  if (!selectionBox) return;
+  const truckObj = selectedBayId != null ? getTruckObject(selectedBayId) : null;
+  if (truckObj) {
+    selectionBox.setFromObject(truckObj);
+    selectionBox.visible = true;
+  } else {
+    selectionBox.visible = false;
+  }
+}
+
+/** Runs every rendered frame (RAF) while a bay is selected, so the panel's numbers and the
+ *  selection outline stay live without waiting for the next ~2.2s SIAP tick. */
+function updateSelection() {
+  if (selectedBayId == null) return;
+  renderInfoPanel();
+  syncSelectionBox();
+}
+
+function showTwin() {
+  if (three && webglOk) three.start();
   if (window.lucide) lucide.createIcons();
 }
 function hideTwin() {
   if (three) three.stop();
-  if (bayCardTimer) { clearInterval(bayCardTimer); bayCardTimer = null; }
-  stopAutoTour();
 }
-function onTickTwin(state) {
-  refreshBayCard();
-  refreshHotspotLive(state);
-  if (currentTab === "pid") refreshPid();
-}
-
-/* ---------------- per-frame update (while shown + tab === 3d) ---------------- */
-function frameUpdate(dt) {
-  const state = SIAP.state;
-  const tNow = performance.now() / 1000;
-  updateTrucks(state.bays, dt, tNow);
-  if (stationHandle) refreshBayStatusDots(stationHandle.group, state.bays);
-  const bay = state.bays.find((b) => b.id === selectedBayId);
-  if (bayRig) bayRig.update(bay, state, tNow);
-  cameraTween.update(dt);
-  if (followBayId != null) {
-    const truck = getTruckObject(followBayId);
-    if (truck) {
-      const target = truck.position.clone();
-      const behind = new THREE.Vector3(0, 4.5, 8).applyAxisAngle(new THREE.Vector3(0, 1, 0), truck.rotation.y);
-      const desired = target.clone().add(behind);
-      three.camera.position.lerp(desired, 0.04);
-      three.controls.target.lerp(target.clone().add(new THREE.Vector3(0, 1.4, 0)), 0.08);
-    }
-  }
-}
-
-/* ---------------- bay selection ---------------- */
-function onBaySelected(bayId) {
-  selectedBayId = bayId;
-  if (bayRig) bayRig.moveTo(bayId);
-  refreshBayCard();
-  if (currentTab === "pid") refreshPid();
-  if (currentPreset === "bay") flyToPreset("bay");
-}
-
-/* ---------------- right-side "Bay N · live" card ---------------- */
-function refreshBayCard() {
-  const state = SIAP.state;
-  const bay = state.bays.find((b) => b.id === selectedBayId);
-  if (!bay || !els.bayId) return;
-  els.bayId.textContent = pad2(bay.id);
-  els.bayHint.textContent = SIAP.statusLabel ? SIAP.statusLabel(bay.status) : bay.status;
-  const pct = bay.target ? Math.min(100, (bay.dispensed / bay.target) * 100) : 0;
-  const rate = 0.0025;
-  const charge = bay.dispensed * rate;
-  els.bayMetrics.innerHTML = `
-    <div class="metric-line"><span class="k">Tanker owner</span><span class="v">${bay.owner}</span></div>
-    <div class="metric-line"><span class="k">Account #</span><span class="v mono">${bay.account}</span></div>
-    <div class="metric-line"><span class="k">License plate</span><span class="v mono">${bay.plate}</span></div>
-    <div class="metric-line"><span class="k">Dispensed</span><span class="v">${Math.round(bay.dispensed).toLocaleString()} / ${bay.target.toLocaleString()} IG</span></div>
-    <div style="margin: 8px 0;"><div class="progress-outer"><div class="progress-inner" style="width:${pct.toFixed(0)}%;"></div></div></div>
-    <div class="metric-line"><span class="k">Flow</span><span class="v">${(bay.status === "filling" ? bay.flow : 0).toFixed(1)} m&sup3;/h</span></div>
-    <div class="metric-line"><span class="k">Status</span><span class="v"><span class="tag ${tagClassFor(bay.status)}">${(SIAP.statusLabel ? SIAP.statusLabel(bay.status) : bay.status).toUpperCase()}</span></span></div>
-    <div class="metric-line"><span class="k">Est. charge</span><span class="v">KD ${charge.toFixed(3)}</span></div>
-  `;
-}
-function tagClassFor(status) {
-  return { filling: "blue", done: "green", fault: "red", offline: "gray", idle: "gray" }[status] || "gray";
-}
-
-/* ---------------- P&ID tab (reuses the existing 2D SVG generator) ---------------- */
-function refreshPid() {
-  if (typeof window.renderBayTwinDiagram !== "function") return;
-  window.renderBayTwinDiagram(selectedBayId);
-  const src = document.getElementById("twin-diagram");
-  if (src && els.pidDiagram) els.pidDiagram.innerHTML = src.innerHTML;
-}
-
-/* ---------------- tabs ---------------- */
-function wireTabs() {
-  els.tabs.addEventListener("click", (e) => {
-    const btn = e.target.closest(".t3-tab");
-    if (!btn || btn.disabled) return;
-    setTab(btn.dataset.tab);
-  });
-}
-function setTab(tab) {
-  currentTab = tab;
-  els.tabs.querySelectorAll(".t3-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-  els.canvas.style.display = tab === "3d" ? "block" : "none";
-  els.labelsEl.style.display = tab === "3d" ? "block" : "none";
-  els.pidLayer.hidden = tab !== "pid";
-  els.renderLayer.hidden = tab !== "render";
-  els.toolbar.style.display = tab === "3d" ? "flex" : "none";
-  if (tab === "3d" && three && webglOk) three.start();
-  else if (three) three.stop();
-  if (tab === "pid") refreshPid();
-}
-
-/* ---------------- toolbar: presets / auto-tour / toggles ---------------- */
-function wireToolbar() {
-  els.toolbar.querySelectorAll(".t3-preset").forEach((btn) => {
-    btn.addEventListener("click", () => flyToPreset(btn.dataset.preset));
-  });
-  els.tour.addEventListener("click", () => (autoTourOn ? stopAutoTour() : startAutoTour()));
-  els.flowToggle.addEventListener("click", () => {
-    flowLinesOn = !flowLinesOn;
-    els.flowToggle.classList.toggle("active", flowLinesOn);
-    if (bayRig) bayRig.setFlowVisible(flowLinesOn);
-  });
-  els.labelsToggle.addEventListener("click", () => {
-    labelsOn = !labelsOn;
-    els.labelsToggle.classList.toggle("active", labelsOn);
-    els.labelsEl.style.visibility = labelsOn ? "visible" : "hidden";
-  });
-}
-
-function flyToPreset(preset) {
-  currentPreset = preset;
-  els.toolbar.querySelectorAll(".t3-preset").forEach((b) => b.classList.toggle("active", b.dataset.preset === preset));
-  if (!three) return;
-  followBayId = null;
-  if (preset === "overview") {
-    const s = overviewShot();
-    cameraTween.to(s.pos, s.target);
-  } else if (preset === "manifold") {
-    const bay = SIAP.state.bays.find((b) => b.id === selectedBayId);
-    const m = bay ? bayLayout(bay.id).manifold : 2;
-    const s = manifoldShot(m);
-    cameraTween.to(s.pos, s.target);
-  } else if (preset === "bay") {
-    const l = bayLayout(selectedBayId);
-    const s = bayShot(new THREE.Vector3(l.manifoldX, 0, l.z));
-    cameraTween.to(s.pos, s.target);
-  } else if (preset === "follow") {
-    followBayId = selectedBayId;
-    const truck = getTruckObject(selectedBayId);
-    if (truck) {
-      const l = bayLayout(selectedBayId);
-      cameraTween.to(new THREE.Vector3(l.manifoldX - 6, 6, l.z + 10), truck.position.clone(), 1.0);
-    }
-  }
-}
-function applyPreset(preset) { flyToPreset(preset); }
-
-function startAutoTour() {
-  autoTourOn = true;
-  els.tour.classList.add("active");
-  autoTourTimer = window.setInterval(() => {
-    const filling = SIAP.state.bays.filter((b) => b.status === "filling");
-    if (!filling.length) return;
-    const idx = filling.findIndex((b) => b.id === selectedBayId);
-    const next = filling[(idx + 1) % filling.length];
-    SIAP.selectBay(next.id);
-    flyToPreset("bay");
-  }, 4000);
-}
-function stopAutoTour() {
-  autoTourOn = false;
-  if (els.tour) els.tour.classList.remove("active");
-  if (autoTourTimer) { clearInterval(autoTourTimer); autoTourTimer = null; }
-}
-
-/* ---------------- keyboard shortcuts (only while this view is active) ---------------- */
-function wireKeyboard() {
-  document.addEventListener("keydown", (e) => {
-    if (SIAP.activeView() !== VIEW_ID) return;
-    if (/input|textarea|select/i.test(e.target.tagName)) return;
-    if (e.key === "1") flyToPreset("overview");
-    else if (e.key === "2") flyToPreset("manifold");
-    else if (e.key === "3") flyToPreset("bay");
-    else if (e.key === "l" || e.key === "L") els.labelsToggle.click();
-    else if (e.key === "Escape") flyToPreset("overview");
-  });
-}
-
-/* ---------------- hover mini-HUD ---------------- */
-function showHoverCard(hit) {
-  if (!hit) { els.hover.hidden = true; return; }
-  const bay = SIAP.state.bays.find((b) => b.id === hit.bayId);
-  if (!bay) { els.hover.hidden = true; return; }
-  const pct = bay.target ? Math.min(100, (bay.dispensed / bay.target) * 100) : 0;
-  els.hover.hidden = false;
-  els.hover.innerHTML = `<strong>Bay ${pad2(bay.id)}</strong><br>${bay.owner}<br>${bay.plate}<br>${pct.toFixed(0)}% &middot; ${(SIAP.statusLabel ? SIAP.statusLabel(bay.status) : bay.status)}`;
-}
-
-/* ---------------- legend ---------------- */
-function buildLegend() {
-  const rows = [
-    ["idle", "Idle"], ["filling", "Filling"], ["done", "Done"], ["fault", "Fault"], ["offline", "Offline"],
-  ];
-  els.legend.innerHTML = rows.map(([k, label]) => {
-    const hex = "#" + STATUS_COLOR[k].toString(16).padStart(6, "0");
-    return `<span class="t3-legend-item"><span class="t3-legend-dot" style="background:${hex}"></span>${label}</span>`;
-  }).join("");
-}
-
-/* ---------------- Render tab hotspots ---------------- */
-function buildHotspots() {
-  els.hotspots.innerHTML = HOTSPOTS.map((h) => `<div class="t3-hotspot" style="left:${h.x}%; top:${h.y}%;" title="${h.label}"><span></span>${h.label}</div>`).join("")
-    + `<div class="t3-hotspot t3-hotspot--live" id="t3-hotspot-live" style="left:93%; top:70%;"></div>`;
-}
-function refreshHotspotLive(state) {
-  const live = document.getElementById("t3-hotspot-live");
-  if (!live) return;
-  const bay = state.bays.find((b) => b.id === selectedBayId);
-  if (!bay) return;
-  const pct = bay.target ? Math.min(100, (bay.dispensed / bay.target) * 100) : 0;
-  live.innerHTML = `<span></span>Bay ${pad2(bay.id)} &middot; ${pct.toFixed(0)}% &middot; ${(bay.status === "filling" ? bay.flow : 0).toFixed(1)} m&sup3;/h`;
+function onTickTwin() {
+  // live bay status is read straight from SIAP.state inside the onTick handler registered in
+  // initThree(); nothing else needs driving per app-level tick.
 }

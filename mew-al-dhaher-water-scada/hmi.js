@@ -166,7 +166,10 @@
 
       <div class="hmi-panel hmi-trend-panel">
         <div class="hmi-panel-title">Flow Trend <span class="hint">FT-14 &middot; last ~2 min</span></div>
-        <div class="hmi-trend-wrap"><canvas id="hmi-trend-chart"></canvas></div>
+        <div class="hmi-trend-wrap">
+          <canvas id="hmi-trend-chart"></canvas>
+          <div class="hmi-trend-idle" id="hmi-trend-idle">No flow &mdash; bay idle</div>
+        </div>
       </div>
 
       <div class="util-text hmi-util-text">Commands are S!aP BPM authorisations relayed to the RTU &mdash; the platform is read-only towards the control loop.</div>
@@ -379,7 +382,7 @@
       account: bay.account,
       status: bay.status,
     };
-    const cols = [current, ...hist].slice(0, 3);
+    const cols = [current, ...hist].slice(0, 2);
 
     const statusCell = (c) => {
       if (c === current) {
@@ -574,6 +577,12 @@
   }
 
   /* ================= trend chart ================= */
+  function updateTrendIdleHint(h) {
+    const hint = document.getElementById("hmi-trend-idle");
+    if (!hint) return;
+    hint.hidden = h.some((v) => v > 0.05);
+  }
+
   function buildChart() {
     const canvas = document.getElementById("hmi-trend-chart");
     if (!canvas || typeof Chart === "undefined") return;
@@ -581,6 +590,7 @@
     const bay = currentBay();
     if (bay) resetChartForBay();
     const h = bay ? flowHist(bay.id) : new Array(TREND_POINTS).fill(0);
+    updateTrendIdleHint(h);
     hmi.chart = new Chart(canvas, {
       type: "line",
       data: {
@@ -634,6 +644,7 @@
     const bay = currentBay();
     if (!bay) return;
     const h = flowHist(bay.id);
+    updateTrendIdleHint(h);
     hmi.chart.data.labels = h.map((_, i) => i);
     hmi.chart.data.datasets[0].data = h;
     hmi.chart.data.datasets[1].data = h.map(() => 45);

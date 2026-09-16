@@ -27,7 +27,6 @@ let wanRestoredTimer = null;
 const VIEW_TITLES = {
   dashboard: ["Command Dashboard", "Al Dhaher Lorry Filling Station · 42 Bays"],
   baycontrol: ["Filling Bay Control", "Live transaction sequence · custody-grade metering"],
-  twin: ["Digital Twin", "End-to-end instrumented flow · one bay, fully live"],
   cctv: ["CCTV & LPR Wall", "IP video surveillance · Al Dhaher → Salmiya Control Centre"],
   billing: ["Billing & MEW Pay", "Prepaid wallet · K-net settlement · customer app"],
   reports: ["Reporting", "Shift, Day & Month · central historian"],
@@ -40,6 +39,7 @@ const NAV_GROUP_IDS = { operations: "nav-group-operations", revenue: "nav-group-
 const SIAP = window.SIAP = {
   get state() { return state; },
   get selectedBayId() { return selectedBayId; },
+  get viewTitles() { return VIEW_TITLES; },
   pad, statusLabel: (s) => statusLabel(s), timeAgo: (ts) => timeAgo(ts),
   on(evt, fn) { (busListeners[evt] = busListeners[evt] || []).push(fn); return () => SIAP.off(evt, fn); },
   off(evt, fn) { busListeners[evt] = (busListeners[evt] || []).filter(f => f !== fn); },
@@ -48,7 +48,7 @@ const SIAP = window.SIAP = {
   activeView() { const v = document.querySelector(".view.active"); return v ? v.id.replace(/^view-/, "") : null; },
   selectBay(id) {
     selectedBayId = id;
-    if (appReady) { renderBaySelect(); renderFlowTrack(); renderBayControlPanel(); renderTwinBaySelect(); renderBayTwinDiagram(id); }
+    if (appReady) { renderBaySelect(); renderFlowTrack(); renderBayControlPanel(); renderBayTwinDiagram(id); }
     SIAP.emit("bay:select", state.bays.find(b => b.id === id));
   },
   /** Start a fill on a bay, optionally overriding the transaction fields
@@ -116,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderFlowTrack();
   renderBayControlPanel();
   renderBayFaceplate();
-  renderTwinBaySelect();
   renderBayTwinDiagram(selectedBayId);
   renderCctvGrid();
   renderLprLog();
@@ -164,8 +163,9 @@ function wireNav() {
     if (section) section.classList.add("active");
 
     const t = VIEW_TITLES[view] || [item.title || view, ""];
-    document.getElementById("view-title").textContent = t[0];
-    document.getElementById("view-sub").textContent = t[1];
+    const tr = window.I18N ? I18N.tr : (x) => x;
+    document.getElementById("view-title").textContent = tr(t[0]);
+    document.getElementById("view-sub").textContent = tr(t[1]);
     lucide.createIcons();
     if (viewHooks[view] && viewHooks[view].onShow) viewHooks[view].onShow(section);
     SIAP.emit("view:show", view);
@@ -196,19 +196,25 @@ function renderBayGrid() {
   });
 }
 
+/* statusLabel()/timeAgo() are the single place every view (dashboard, bay control, network
+   map, HMI...) gets its status word / relative time from, so routing them through I18N here
+   is what makes all of that per-tick-regenerated text bilingual for free -- without it, every
+   view's own render function would need its own translation pass on every re-render. */
 function statusLabel(s) {
-  return { idle: "Idle", filling: "Filling", done: "Done", fault: "Fault", offline: "Offline" }[s];
+  const en = { idle: "Idle", filling: "Filling", done: "Done", fault: "Fault", offline: "Offline" }[s];
+  return window.I18N ? I18N.tr(en) : en;
 }
 
 /** Turns a stored timestamp into a live "Xm ago" label — recomputed on every render so
  *  alarms/events don't look frozen if the demo screen is left running for a while. */
 function timeAgo(ts) {
   const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return "just now";
+  const tr = window.I18N ? I18N.tr : (x) => x;
+  if (s < 60) return tr("just now");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
+  if (m < 60) return `${m}${tr("m ago")}`;
   const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m ago`;
+  return `${h}${tr("h")} ${m % 60}${tr("m ago")}`;
 }
 
 function renderAlarms() {
@@ -251,35 +257,59 @@ function updateOpenAlarmsKpi() {
   }
 }
 
+/** Top-right toast popup (not a full-width bar) — the whole card is a single click
+ *  target that jumps to the dashboard alarm list, so operators don't have to hunt
+ *  for a small inline link. */
+function jumpToAlarmList() {
+  document.querySelector('.nav-item[data-view="dashboard"]').click();
+  document.getElementById("alarm-list").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+let alarmBannerDismissTimer = null;
+let alarmBannerLastCritId = null;
+let alarmBannerDismissed = false;
+
 function renderAlarmBanner() {
   const banner = document.getElementById("alarm-banner");
+  banner.onclick = jumpToAlarmList;
+  banner.tabIndex = 0;
+  banner.setAttribute("role", "button");
   // WP-D: while a simulated WAN outage is forced, the offline banner takes priority
   // over the normal critical-alarm banner (reuses the same .alarm-banner styling).
   if (wanForced) {
+    clearTimeout(alarmBannerDismissTimer);
     banner.hidden = false;
     banner.className = "alarm-banner amber";
-    banner.innerHTML = `<span class="dot"></span> Al Dhaher LCC offline — 42 bays continue on last-known balance · ${wanBufferedCount} transaction${wanBufferedCount === 1 ? "" : "s"} buffered (store-and-forward)`;
+    banner.innerHTML = `<span class="dot"></span><span>Al Dhaher LCC offline — 42 bays continue on last-known balance · ${wanBufferedCount} transaction${wanBufferedCount === 1 ? "" : "s"} buffered (store-and-forward)<a>View system architecture</a></span>`;
     return;
   }
   if (wanRestoredMsg) {
+    clearTimeout(alarmBannerDismissTimer);
     banner.hidden = false;
     banner.className = "alarm-banner green";
-    banner.innerHTML = `<span class="dot"></span> ${wanRestoredMsg}`;
+    banner.innerHTML = `<span class="dot"></span><span>${wanRestoredMsg}</span>`;
     return;
   }
   banner.className = "alarm-banner";
   const crit = state.alarms.filter(a => !a.ack && a.sev === "crit");
-  if (crit.length === 0) { banner.hidden = true; return; }
+  if (crit.length === 0) { banner.hidden = true; clearTimeout(alarmBannerDismissTimer); alarmBannerLastCritId = null; return; }
+  // Auto-dismiss like a real notification toast: pop up for ~8s then get out of the way,
+  // instead of sitting on screen forever. Re-renders triggered by unrelated events (WAN
+  // restore, an ack elsewhere) must NOT resurrect an already-dismissed toast for the same
+  // top alarm — only a genuinely new/different top alarm re-arms it.
+  if (crit[0].id !== alarmBannerLastCritId) {
+    alarmBannerLastCritId = crit[0].id;
+    alarmBannerDismissed = false;
+    clearTimeout(alarmBannerDismissTimer);
+    alarmBannerDismissTimer = setTimeout(() => { alarmBannerDismissed = true; banner.hidden = true; }, 8000);
+  }
+  if (alarmBannerDismissed) { banner.hidden = true; return; }
   banner.hidden = false;
   banner.innerHTML = `
     <span class="dot"></span>
-    ${crit.length} unacknowledged critical alarm${crit.length > 1 ? "s" : ""} — "${crit[0].text}"
-    <a data-jump-alarms tabindex="0" role="button">View &amp; acknowledge</a>
+    <span>${crit.length} unacknowledged critical alarm${crit.length > 1 ? "s" : ""} — "${crit[0].text}"
+    <a>View &amp; acknowledge</a></span>
   `;
-  banner.querySelector("[data-jump-alarms]").addEventListener("click", () => {
-    document.querySelector('.nav-item[data-view="dashboard"]').click();
-    document.getElementById("alarm-list").scrollIntoView({ behavior: "smooth", block: "center" });
-  });
 }
 
 /* ================= WP-D: OFFLINE / STORE-AND-FORWARD DEMO ================= */
@@ -298,6 +328,15 @@ function wireWanToggle() {
       renderAlarmBanner();
       btn.classList.add("btn-red");
       btn.innerHTML = `<i data-lucide="wifi-off"></i> WAN loss: ON`;
+      // Demo: the effect (red link dots, offline toast, buffered-txn count) lives in the
+      // architecture diagram further down the dashboard — jump there and flash the card
+      // so turning this on visibly *does* something instead of silently flipping state.
+      document.querySelector('.nav-item[data-view="dashboard"]').click();
+      const archCard = document.getElementById("arch-diagram").closest(".card");
+      archCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      archCard.classList.remove("flash-highlight");
+      void archCard.offsetWidth; // restart the animation if it's already mid-flash
+      archCard.classList.add("flash-highlight");
     } else {
       wanForced = false;
       const replayed = wanBufferedCount;
@@ -519,7 +558,7 @@ function renderArchDiagram() {
         const col = i % 3, row = Math.floor(i / 3);
         const x = 480 + col * 100, y = 88 + row * 40;
         return `<rect class="box box-chip" x="${x}" y="${y}" width="92" height="32" rx="5"/>
-                <text x="${x+46}" y="${y+20}" text-anchor="middle" style="font-size:10.5px; font-weight:600; fill:var(--text); letter-spacing:0.01em;">${m}</text>`;
+                <text x="${x+46}" y="${y+20}" text-anchor="middle" style="font-size:9px; font-weight:600; fill:var(--text); letter-spacing:0;">${m}</text>`;
       }).join("")}
     </g>
     <rect class="box box-chip" x="480" y="176" width="272" height="26" rx="6"/>
@@ -630,8 +669,7 @@ function wireBayControl() {
     renderBayControlPanel();
   });
   document.getElementById("btn-view-twin").addEventListener("click", () => {
-    document.querySelector('.nav-item[data-view="twin"]').click();
-    renderTwinBaySelect();
+    document.querySelector('.nav-item[data-view="twin3d"]').click();
     renderBayTwinDiagram(selectedBayId);
   });
 }
@@ -743,12 +781,10 @@ function renderBayControlPanel() {
   document.getElementById("btn-stop-fill").disabled = bay.status !== "filling";
 }
 
-/* ================= DIGITAL TWIN (end-to-end instrumented flow) ================= */
-function renderTwinBaySelect() {
-  const sel = document.getElementById("twin-bay-select");
-  sel.innerHTML = state.bays.map(b => `<option value="${b.id}" ${b.id === selectedBayId ? "selected" : ""}>Bay ${pad(b.id)} — ${statusLabel(b.status)}</option>`).join("");
-  sel.onchange = () => SIAP.selectBay(parseInt(sel.value, 10));
-}
+/* ================= DIGITAL TWIN (end-to-end instrumented flow) =================
+   The dedicated nav page for this is gone (superseded by the 3D Digital Twin's P&ID
+   tab), but renderBayTwinDiagram still renders into the hidden #twin-diagram div —
+   that's what the P&ID tab reads from. */
 
 /** Deterministic-ish live jitter so readings move every tick without being random noise. */
 function twinJitter(seed, amplitude) {
@@ -758,7 +794,6 @@ function twinJitter(seed, amplitude) {
 function renderBayTwinDiagram(bayId) {
   const bay = state.bays.find(b => b.id === bayId);
   if (!bay) return;
-  document.getElementById("twin-hint").textContent = `Bay ${pad(bay.id)} · live`;
 
   const filling = bay.status === "filling";
   const fault = bay.status === "fault";
@@ -1324,10 +1359,6 @@ function simulateTick() {
     renderFlowTrack();
     renderBayControlPanel();
     renderBaySelect();
-  }
-  if (document.getElementById("view-twin").classList.contains("active")) {
-    renderTwinBaySelect();
-    renderBayTwinDiagram(selectedBayId);
   }
   if (document.getElementById("view-billing").classList.contains("active") && Math.random() > 0.5) {
     state.ledger.unshift(genLedgerRow());

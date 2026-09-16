@@ -1,85 +1,134 @@
-/* twin3d.css — WP-A 3D Digital Twin. Uses only styles.css tokens (--panel, --accent, --green,
-   --amber, --red, --border-strong, --radius-lg, .card / .btn / .tag / .metric-line / .util-text). */
+/* twin3d.css — a full-bleed 3D canvas, a small top-left status chip, a status-dots toggle, a
+ * fixed screen-anchored click-to-info panel (bay/truck details on click), and the click-drag-
+ * scale scene editor's side panel (position/rotate/scale any placed object -- see twin3d.js /
+ * twin3d/editor.js). */
 
-.t3-wrap { display: flex; flex-direction: column; gap: 14px; }
-
-.t3-toolbar-card { padding: 12px 14px; }
-.t3-tabrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-.t3-tabs { display: flex; gap: 6px; }
-.t3-tab.active { background: var(--accent); color: #04141c; border-color: var(--accent); }
-
-.t3-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.t3-toolbar .btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(34,211,238,0.4); }
-.t3-sep { width: 1px; align-self: stretch; background: var(--border-strong); margin: 0 4px; }
-
-.t3-body { align-items: start; }
-.t3-stage-card { padding: 0; overflow: hidden; }
+.t3-wrap { display: flex; flex-direction: column; gap: 0; }
 
 .t3-canvas-wrap {
   position: relative;
-  height: calc(100vh - 280px);
-  min-height: 520px;
+  height: calc(100vh - 170px);
+  min-height: 560px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--bg);
 }
 .t3-canvas-wrap canvas { display: block; width: 100%; height: 100%; cursor: grab; }
-.t3-labels-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 
-.t3-layer { position: absolute; inset: 0; }
-.t3-pid-layer { background: var(--bg); overflow: auto; padding: 10px; }
-.t3-pid-diagram svg { width: 100%; height: auto; }
-
-.t3-render-layer { background: #000; }
-.t3-render-layer img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.t3-hotspots { position: absolute; inset: 0; }
-.t3-hotspot {
-  position: absolute; transform: translate(-50%, -100%);
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(10, 20, 36, 0.82); border: 1px solid var(--border-strong);
-  color: var(--text); font-size: 10.5px; font-weight: 600;
-  padding: 4px 8px; border-radius: 20px; white-space: nowrap;
+.t3-status-chip {
+  position: absolute; left: 12px; top: 12px; z-index: 4;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(10, 20, 36, 0.75); border: 1px solid var(--border-strong);
+  color: var(--text-dim); font-size: 11px; padding: 6px 12px; border-radius: 20px;
 }
-.t3-hotspot span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
-.t3-hotspot--live { background: rgba(34,211,238,0.14); border-color: rgba(34,211,238,0.5); color: var(--accent); font-weight: 700; }
+.t3-status-chip strong { color: var(--text); }
+.t3-click-hint { color: var(--text-faint); }
+@media (max-width: 1300px) { .t3-click-hint { display: none; } }
+
+.t3-labels-btn { position: absolute; right: 12px; top: 12px; z-index: 4; }
+.t3-labels-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(var(--accent-rgb),0.4); }
+.t3-editor-btn { position: absolute; right: 12px; top: 50px; z-index: 4; }
+.t3-editor-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(var(--accent-rgb),0.4); }
+
+.t3-legend {
+  position: absolute; left: 12px; bottom: 12px; z-index: 4;
+  display: flex; gap: 10px; flex-wrap: wrap; max-width: calc(100% - 24px);
+  background: rgba(10, 20, 36, 0.75); border: 1px solid var(--border-strong); border-radius: 20px;
+  padding: 6px 12px; font-size: 10.5px; color: var(--text-dim); text-transform: capitalize;
+}
+.t3-legend-item { display: flex; align-items: center; gap: 5px; }
+.t3-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
 .t3-fallback-note {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
   background: var(--panel); border: 1px solid var(--amber); color: var(--amber);
   padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; z-index: 5;
 }
-/* An author rule that sets `display` ties in specificity with the UA `[hidden]{display:none}`
-   rule and wins (author > UA), so the native hidden attribute silently stops working unless we
-   restate it here. Same applies to any other absolutely-positioned layer that declares `display`. */
 .t3-fallback-note[hidden] { display: none !important; }
 
-.t3-legend {
-  position: absolute; left: 12px; bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap;
-  background: rgba(10, 20, 36, 0.75); border: 1px solid var(--border-strong);
-  padding: 6px 10px; border-radius: 8px; z-index: 4;
+/* ---------------- click-to-info panel: fixed to the viewport, never to a 3D position ---------------- */
+.t3-info-panel {
+  position: absolute; top: 56px; right: 12px; width: 268px;
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45); z-index: 7; padding: 12px 14px 14px; font-size: 11.5px;
 }
-.t3-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-dim); }
-.t3-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.t3-info-panel[hidden] { display: none !important; }
+.t3-info-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.t3-info-title { font-size: 14px; font-weight: 800; color: var(--text); }
+.t3-info-sub { font-size: 10.5px; color: var(--text-dim); margin-top: 1px; }
+.t3-info-body .metric-line { padding: 5px 0; }
 
-.t3-hover {
-  position: absolute; right: 12px; top: 12px; max-width: 220px; z-index: 4;
-  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 8px;
-  padding: 8px 10px; font-size: 11px; color: var(--text-dim); line-height: 1.5;
-  pointer-events: none;
+/* ---------------- scene editor panel: fixed on the LEFT so it never collides with the
+   click-to-info panel on the right (the two are also mutually exclusive in twin3d.js). ---------------- */
+.t3-editor-panel {
+  position: absolute; top: 56px; left: 12px; width: 250px; max-height: calc(100% - 90px);
+  background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45); z-index: 7; padding: 12px 14px 14px; font-size: 11.5px;
+  display: flex; flex-direction: column; gap: 10px; overflow: hidden;
 }
-.t3-hover strong { color: var(--accent); }
+.t3-editor-panel[hidden] { display: none !important; }
+.t3-editor-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 800; color: var(--text); flex-shrink: 0; }
+.t3-editor-search {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 9px;
+}
+.t3-editor-search i { width: 12px; height: 12px; color: var(--text-faint); flex-shrink: 0; }
+.t3-editor-search input { flex: 1; min-width: 0; background: none; border: none; color: var(--text); font-size: 11px; outline: none; }
+.t3-editor-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; min-height: 40px; max-height: 160px; flex-shrink: 0; }
+.t3-editor-row {
+  text-align: left; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 9px; color: var(--text-dim); font-size: 11px; cursor: pointer;
+}
+.t3-editor-row:hover { border-color: var(--border-strong); color: var(--text); }
+.t3-editor-row.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+.t3-editor-selected { border-top: 1px solid var(--border); padding-top: 10px; flex-shrink: 0; }
+.t3-editor-selected[hidden] { display: none !important; }
+.t3-editor-selected-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.t3-editor-modes { display: flex; gap: 4px; margin-bottom: 8px; }
+.t3-editor-modes button {
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 6px 0;
+  background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 7px; color: var(--text-dim); cursor: pointer;
+}
+.t3-editor-modes button svg { width: 13px; height: 13px; }
+.t3-editor-modes button.active { color: var(--accent); border-color: rgba(var(--accent-rgb),0.4); background: var(--accent-dim); }
+.t3-editor-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.t3-editor-fields[hidden] { display: none !important; }
+.t3-editor-fields label { display: flex; flex-direction: column; gap: 2px; font-size: 9.5px; color: var(--text-faint); text-transform: uppercase; }
+.t3-editor-fields input {
+  background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 6px;
+  color: var(--text); font-size: 11px; padding: 5px 6px; width: 100%; min-width: 0;
+}
+.t3-editor-footer { border-top: 1px solid var(--border); padding-top: 10px; flex-shrink: 0; }
 
-/* CSS2D HUD chips pinned to instruments in the 3D scene */
-.t3-label {
-  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 6px;
-  padding: 3px 7px; font-size: 10px; line-height: 1.5; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+/* ---------------- on-screen camera nudge pad (right side of the viewport) ---------------- */
+.t3-camnav {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 4;
+  display: grid; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 30px); gap: 3px;
+  background: rgba(10, 20, 36, 0.75); border: 1px solid var(--border-strong); border-radius: 10px; padding: 6px;
 }
-.t3-label .t3-k { color: var(--text-faint); text-transform: uppercase; font-size: 8.5px; letter-spacing: 0.04em; margin-right: 5px; }
-.t3-label .t3-v { color: var(--accent); font-weight: 700; font-family: 'SFMono-Regular', Consolas, monospace; }
-.t3-label--good .t3-v { color: var(--green); }
-.t3-label--bad .t3-v { color: var(--red); }
+.t3-camnav button {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 6px;
+  color: var(--text-dim); cursor: pointer; padding: 0;
+}
+.t3-camnav button:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),0.4); }
+.t3-camnav button svg { width: 14px; height: 14px; }
+.t3-camnav .t3-cam-center { grid-column: 2; grid-row: 2; }
+.t3-camzoom {
+  position: absolute; right: 12px; top: calc(50% + 108px); z-index: 4;
+  display: flex; flex-direction: column; gap: 3px;
+  background: rgba(10, 20, 36, 0.75); border: 1px solid var(--border-strong); border-radius: 10px; padding: 6px;
+}
+.t3-camzoom button {
+  display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+  background: var(--panel-alt); border: 1px solid var(--border-strong); border-radius: 6px;
+  color: var(--text-dim); cursor: pointer; padding: 0;
+}
+.t3-camzoom button:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),0.4); }
+.t3-camzoom button svg { width: 14px; height: 14px; }
 
 @media (max-width: 1100px) {
   .t3-canvas-wrap { height: 60vh; min-height: 420px; }
+  .t3-info-panel { width: 88vw; right: 6vw; }
+  .t3-editor-panel { width: 88vw; left: 6vw; }
 }
