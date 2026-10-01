@@ -2,7 +2,7 @@
 *.glb
 *.gltf
 # ...except the curated, licensed low-poly set used by the demo (all < 6 MB, see manifest.json)
-!assets/models/*.glb
+!public/assets/models/*.glb
 
 # Windows
 Thumbs.db
@@ -21,3 +21,5 @@ __pycache__/
 
 # Static build output (repo root)
 /dist/
+
+*.tsbuildinfo

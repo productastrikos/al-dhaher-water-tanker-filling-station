@@ -1,0 +1,32 @@
+// WP-C (HMI + Network map) additions. The PCS 7 faceplate keeps its English process labels (as in the legacy);
+// only the surrounding chrome and the map's tooltips / empty state are translated.
+const extra: Record<string, string> = {
+  'Zoom the map': 'تحريك وتكبير الخريطة',
+  'Zoom in': 'تكبير',
+  'Zoom out': 'تصغير',
+  'Reset view': 'إعادة ضبط العرض',
+  'Back to station list': 'العودة إلى قائمة المحطات',
+  'Close': 'إغلاق',
+  'No stations match': 'لا توجد محطات مطابقة لـ',
+  'Connectivity': 'الاتصال',
+  'Online': 'متصل',
+  'Offline': 'غير متصل',
+  'Dispensed today': 'المصروف اليوم',
+  'Full 3D twin available for the flagship site (Al Dhaher).': 'التوأم الرقمي ثلاثي الأبعاد متاح للموقع الرئيسي (الظاهر).',
+  'Bay': 'الحوض',
+  'Batch Record': 'سجل الدفعات',
+  'Commands': 'الأوامر',
+  'Interlocks': 'التعشيقات',
+  'Earth clamp': 'مشبك التأريض',
+  'Hatch open': 'فتحة مفتوحة',
+  'Overfill probe': 'مجس الامتلاء الزائد',
+  'Emergency stop': 'إيقاف طارئ',
+  'RTU comms': 'اتصال وحدة التحكم',
+  'Flow Trend': 'منحنى التدفق',
+  'last ~2 min': 'آخر ~دقيقتين',
+  'PCS 7 classic': 'نمط PCS 7 الكلاسيكي',
+  'No active alarms for this bay': 'لا توجد إنذارات نشطة لهذا الحوض',
+  'No flow — bay idle': 'لا يوجد تدفق — الحوض خامل',
+  'Commands are S!aP BPM authorisations relayed to the RTU — the platform is read-only towards the control loop.': 'الأوامر هي تفويضات S!aP BPM تُنقل إلى وحدة التحكم — المنصة للقراءة فقط تجاه حلقة التحكم.',
+};
+export default extra;

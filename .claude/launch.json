@@ -2,10 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "al-dhaher-demo",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8098", "--directory", "."],
-      "port": 8098
+      "name": "react-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3251
     }
   ]
 }

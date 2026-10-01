@@ -1,0 +1,7 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+/* Legacy S!aP stylesheets are reused verbatim so the look is unchanged (no tailwind preflight on purpose). */
+@import "./styles.css";
+@import "./twin3d.css";
+@import "./erp.css";
+#root { display: contents; }
