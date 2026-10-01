@@ -3,17 +3,19 @@
 // served. No dependencies, no bundling - the app is plain HTML/CSS/JS.
 import { cpSync, rmSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, extname } from 'node:path';
+import { dirname, join, extname, resolve } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dist = join(root, 'dist');
+// --out <dir> lets the repo root build into ./dist (relative to the cwd); default is <app>/dist
+const outIdx = process.argv.indexOf('--out');
+const dist = outIdx > -1 ? resolve(process.cwd(), process.argv[outIdx + 1]) : join(root, 'dist');
 
 const skipDirs = new Set(['dist', 'docs', 'reference', 'tools', 'scripts', 'node_modules', '.claude']);
 const skipFiles = new Set(['.htaccess', 'package.json', 'package-lock.json']);
 const skipExts = new Set(['.md', '.bat', '.ps1', '.py', '.pyc']);
 
 rmSync(dist, { recursive: true, force: true });
-mkdirSync(dist);
+mkdirSync(dist, { recursive: true });
 
 let count = 0;
 for (const e of readdirSync(root, { withFileTypes: true })) {

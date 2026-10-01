@@ -19,13 +19,14 @@ Registry row to append: `aldhaher-water | 3251 | - | live`
 ## Build + run (on the server)
 
 ```bash
-cd mew-al-dhaher-water-scada
+# run from the REPO ROOT
 npm install && npm run build        # -> dist/ (only runtime files; docs/reference/tools are NOT copied)
 pm2 start serve --name "aldhaher-water_3251" -- ./dist -s -p 3251
 pm2 save
 ```
 
-`npm run build` is `node scripts/build.mjs` (no dependencies). It copies the app into `dist/` and leaves out
+`npm run build` runs `mew-al-dhaher-water-scada/scripts/build.mjs --out dist` (no dependencies; it also works
+from inside `mew-al-dhaher-water-scada/`, producing that folder's own `dist/`). It copies the app into `dist/` and leaves out
 `docs/`, `reference/` (client PDFs/PPTX), `tools/`, `*.md`, `*.bat`, `*.py`.
 Requires `serve` installed globally (`npm i -g serve`), as for the other POCs.
 

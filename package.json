@@ -1,0 +1,9 @@
+{
+  "name": "al-dhaher-water-tanker-filling-station",
+  "version": "2.0.0",
+  "private": true,
+  "description": "MEW Al Dhaher water tanker filling station - SCADA / 3D twin / ERP demo (static front end, no backend)",
+  "scripts": {
+    "build": "node mew-al-dhaher-water-scada/scripts/build.mjs --out dist"
+  }
+}
