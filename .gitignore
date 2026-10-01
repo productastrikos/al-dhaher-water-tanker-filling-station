@@ -15,3 +15,6 @@ node_modules/
 .firecrawl/
 __pycache__/
 *.pyc
+
+# Static build output
+mew-al-dhaher-water-scada/dist/
