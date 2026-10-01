@@ -545,6 +545,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("request-card-btn")?.addEventListener("click", requestAccessCard);
   document.getElementById("receipt-share-btn")?.addEventListener("click", () => showToast("Receipt shared"));
   document.getElementById("register-truck-btn")?.addEventListener("click", () => goto("fleet"));
+  document.getElementById("filling-cancel-btn")?.addEventListener("click", () => {
+    FILL.active = false;
+    clearInterval(FILL.timer);
+    resetPinStep();
+    showQrStep("scan");
+    goto("qr");
+  });
 
   document.querySelectorAll(".amt-chip").forEach(chip => {
     chip.addEventListener("click", () => {
