@@ -30,7 +30,9 @@ for (const e of readdirSync(root, { withFileTypes: true })) {
   count++;
 }
 
-for (const f of ['index.html', 'mobile.html']) {
+// serve.json must ship: it turns off `cleanUrls` (whose 301 drops the ?screen= query the
+// driver app reads) and restores `/` -> index.html. Without it the deploy regresses. See DEPLOY.md.
+for (const f of ['index.html', 'mobile.html', 'serve.json']) {
   if (!existsSync(join(dist, f))) throw new Error(`build failed: ${f} missing from dist/`);
 }
 console.log(`dist/ ready (${count} top-level entries)`);

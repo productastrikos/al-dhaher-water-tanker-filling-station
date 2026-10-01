@@ -18,6 +18,3 @@ __pycache__/
 
 # Static build output
 /dist/
-
-# Static build output (repo root)
-/dist/
