@@ -4,7 +4,7 @@
     {
       "name": "al-dhaher-demo",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8098", "--directory", "mew-al-dhaher-water-scada"],
+      "runtimeArgs": ["-m", "http.server", "8098", "--directory", "."],
       "port": 8098
     }
   ]

@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, extname, resolve } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// --out <dir> lets the repo root build into ./dist (relative to the cwd); default is <app>/dist
+// --out <dir> overrides the output folder (relative to the cwd); default is <repo>/dist
 const outIdx = process.argv.indexOf('--out');
 const dist = outIdx > -1 ? resolve(process.cwd(), process.argv[outIdx + 1]) : join(root, 'dist');
 
-const skipDirs = new Set(['dist', 'docs', 'reference', 'tools', 'scripts', 'node_modules', '.claude']);
-const skipFiles = new Set(['.htaccess', 'package.json', 'package-lock.json']);
+const skipDirs = new Set(['dist', 'docs', 'reference', 'tools', 'scripts', 'node_modules']);
+const skipFiles = new Set(['package.json', 'package-lock.json']);
 const skipExts = new Set(['.md', '.bat', '.ps1', '.py', '.pyc']);
 
 rmSync(dist, { recursive: true, force: true });
@@ -19,6 +19,7 @@ mkdirSync(dist, { recursive: true });
 
 let count = 0;
 for (const e of readdirSync(root, { withFileTypes: true })) {
+  if (e.name.startsWith('.')) continue; // .git, .claude, .htaccess, .gitignore
   if (e.isDirectory()) {
     if (skipDirs.has(e.name)) continue;
     cpSync(join(root, e.name), join(dist, e.name), { recursive: true });

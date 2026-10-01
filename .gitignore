@@ -2,7 +2,7 @@
 *.glb
 *.gltf
 # ...except the curated, licensed low-poly set used by the demo (all < 6 MB, see manifest.json)
-!mew-al-dhaher-water-scada/assets/models/*.glb
+!assets/models/*.glb
 
 # Windows
 Thumbs.db
@@ -17,7 +17,7 @@ __pycache__/
 *.pyc
 
 # Static build output
-mew-al-dhaher-water-scada/dist/
+/dist/
 
 # Static build output (repo root)
 /dist/

@@ -16,14 +16,14 @@ HTTP — double-clicking `index.html` will show a mostly-working app but the
 3D twin will fail silently (falls back to the 2D P&ID). Easiest path:
 
 ```
-cd mew-al-dhaher-water-scada
+# (run from the repo root)
 run_demo.bat        # Windows: finds Python (or falls back to Node) and opens the browser for you
 ```
 
 or manually:
 
 ```
-cd mew-al-dhaher-water-scada
+# (run from the repo root)
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
