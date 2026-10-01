@@ -6,7 +6,7 @@
 <title>MEW Pay — Water Wallet</title>
 <script src="theme.js?v=1"></script>
 <link rel="stylesheet" href="styles.css?v=9" />
-<link rel="stylesheet" href="mobile.css?v=5" />
+<link rel="stylesheet" href="mobile.css?v=6" />
 <script src="vendor/lucide.min.js"></script>
 </head>
 <body class="mobile-body">
@@ -110,6 +110,7 @@
 
     <!-- ============ FILLING IN PROGRESS ============ -->
     <section class="mscreen" id="mscreen-filling">
+      <button class="mback" id="filling-cancel-btn"><i data-lucide="chevron-left"></i> <span data-i18n="pay">Pay</span></button>
       <div class="mobile-section-title" style="margin-top:0;" data-i18n="fillingTitle">Filling in Progress</div>
       <div class="filling-card">
         <div class="filling-ring-wrap">
@@ -150,6 +151,7 @@
 
     <!-- ============ FLEET ============ -->
     <section class="mscreen" id="mscreen-fleet">
+      <button class="mback" data-back="wallet"><i data-lucide="chevron-left"></i> <span data-i18n="wallet">Wallet</span></button>
       <div class="mobile-section-title" style="margin-top:0;" data-i18n="myTrucks">My Trucks</div>
       <div id="m-truck-list"></div>
       <div class="mobile-section-title" data-i18n="driversTitle">Drivers</div>
@@ -248,6 +250,6 @@
   </nav>
 </div>
 
-<script src="mobile.js?v=5"></script>
+<script src="mobile.js?v=6"></script>
 </body>
 </html>
